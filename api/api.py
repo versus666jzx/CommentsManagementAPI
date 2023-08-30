@@ -146,7 +146,7 @@ def select_comment_index_by_article_lang(index_lang: str):
 
 
 @app.post("/create_article")
-def create_article(
+async def create_article(
         article_lang: str,
         title: str,
         content: str,
@@ -203,7 +203,7 @@ def create_article(
 
 
 @app.post("/edit_article_content")
-def edit_article_content(article_lang: str, article_id: str, article_text: str):
+async def edit_article_content(article_lang: str, article_id: str, article_text: str):
     """
     **Редактирование содержания статьи.**
 
@@ -248,7 +248,7 @@ def edit_article_content(article_lang: str, article_id: str, article_text: str):
 
 
 @app.post("/delete_article")
-def delete_article(article_lang: str, article_id: str):
+async def delete_article(article_lang: str, article_id: str):
     """
     **Удаление статьи по её ID.**
 
@@ -288,7 +288,7 @@ def delete_article(article_lang: str, article_id: str):
 
 
 @app.post("/add_comment")
-def add_comment(
+async def add_comment(
         comment_lang: str,
         article_id: str,
         comment_start_index: int,
@@ -349,7 +349,7 @@ def add_comment(
 
 
 @app.post("/edit_comment")
-def edit_comment(comment_lang: str, comment_id: str, comment_text: str):
+async def edit_comment(comment_lang: str, comment_id: str, comment_text: str):
     """
     **Редактирование комментария.**
 
@@ -393,7 +393,7 @@ def edit_comment(comment_lang: str, comment_id: str, comment_text: str):
 
 
 @app.post("delete_comment")
-def delete_comment(comment_lang: str, comment_id: str):
+async def delete_comment(comment_lang: str, comment_id: str):
     """
     **Удаление комментария по его ID.**
 
@@ -433,7 +433,7 @@ def delete_comment(comment_lang: str, comment_id: str):
 
 
 @app.get("/search_article")
-def search_articles(query: str):
+async def search_articles(query: str):
     """
     **Полнотекстовый поиск статей.**
 
@@ -481,7 +481,7 @@ def search_articles(query: str):
 
 
 @app.get("/search_comments")
-def search_comments(query: str):
+async def search_comments(query: str):
     """
     **Поиск комментариев по содержанию.**
 
@@ -533,7 +533,7 @@ def search_comments(query: str):
 
 
 @app.get("/get_all_articles")
-def get_all_articles():
+async def get_all_articles():
     """
     **Получение всех статей.**
 
@@ -569,7 +569,7 @@ def get_all_articles():
 
 
 @app.get("/get_article_by_id")
-def get_article_by_id(article_lang: str, article_id: str):
+async def get_article_by_id(article_lang: str, article_id: str):
     """
     **Получение статьи по её ID.**
 
@@ -606,7 +606,7 @@ def get_article_by_id(article_lang: str, article_id: str):
 
 
 @app.get("/get_article_comments")
-def get_article_comments(article_lang: str, article_id: str):
+async def get_article_comments(article_lang: str, article_id: str):
     """
     **Получение комментариев к статье.**
 
