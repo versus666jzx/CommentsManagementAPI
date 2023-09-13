@@ -1,9 +1,10 @@
 import json
 from datetime import datetime
+from typing import Annotated, Union
 
 from elasticsearch import Elasticsearch, NotFoundError, BadRequestError
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Depends
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from classes.article import Article
 from classes.comment import Comment
@@ -563,6 +564,15 @@ async def get_article_comments(article_id: str):
     return JSONResponse(res())
 
 
+@app.get("/")
+def redirect_to_doc(token: Annotated[str, Depends(oauth2_scheme)]):
+    """
+    Перенаправляет в раздел с документацией при обращении к корневому каталогу API
+
+    """
+    return RedirectResponse("/docs")
+
+
 @app.on_event("shutdown")
 def app_shutdown():
     es.close()
@@ -571,4 +581,4 @@ def app_shutdown():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="localhost", port=8001)
