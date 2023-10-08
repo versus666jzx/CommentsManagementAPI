@@ -1,5 +1,6 @@
-from api.classes.settings import Settings
 from elasticsearch import Elasticsearch
+
+from api.classes.settings import Settings
 
 settings = Settings()
 

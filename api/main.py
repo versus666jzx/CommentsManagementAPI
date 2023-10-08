@@ -20,7 +20,7 @@ app = FastAPI(
 _status_ - "ok" или "error"\n
 _message_ - содержит более подробную информацию об ошибке, если status = "error"\n
 _result_ - содержит результат выполнения запроса\n
-    """
+    """,
 )
 
 app.include_router(article.router)

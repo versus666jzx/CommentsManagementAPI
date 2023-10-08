@@ -9,16 +9,12 @@ from api.classes.result import ApiResult
 from api.es_tools.es_connection import es_instance
 
 router = APIRouter(
-    prefix="/article",
-    tags=["Article"],
-    responses={404: {"description": "Not found"}}
+    prefix="/article", tags=["Article"], responses={404: {"description": "Not found"}}
 )
 
 
 @router.post("/create_article")
-async def create_article(
-        article: Article
-):
+async def create_article(article: Article):
     """
         **Создание статьи.**
 
@@ -61,7 +57,9 @@ async def create_article(
 
 
 @router.post("/edit_article_content")
-async def edit_article_content(article_id: Annotated[str, Body(...)], article_text: Annotated[str, Body(...)]):
+async def edit_article_content(
+    article_id: Annotated[str, Body(...)], article_text: Annotated[str, Body(...)]
+):
     """
     **Редактирование содержания статьи.**
 
@@ -196,7 +194,9 @@ async def get_all_articles():
     """
 
     try:
-        response = es_instance.es.search(index="articles", body={"query": {"match_all": {}}})
+        response = es_instance.es.search(
+            index="articles", body={"query": {"match_all": {}}}
+        )
         articles = [
             {
                 "id": hit.get("_id"),
