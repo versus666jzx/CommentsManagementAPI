@@ -26,68 +26,64 @@ app = FastAPI(
 _status_ - "ok" или "error"\n
 _message_ - содержит более подробную информацию об ошибке, если status = "error"\n
 _result_ - содержит результат выполнения запроса\n
-    """
+    """,
 )
 
 elastic_user = "elastic"
 elastic_passwd = "elastic"
 
 # Подключение к Elasticsearch
-es = Elasticsearch(["https://localhost:9200"], basic_auth=(elastic_user, elastic_passwd), verify_certs=False)
+es = Elasticsearch(
+    ["https://localhost:9200"],
+    basic_auth=(elastic_user, elastic_passwd),
+    verify_certs=False,
+)
 
 # es.indices.delete(index="articles")
 # es.indices.delete(index="comments")
 
 # Создание индекса (если не существует)
 
-if (not es.indices.exists(index="articles") or
-    not es.indices.exists(index="comments")
-):
-
+if not es.indices.exists(index="articles") or not es.indices.exists(index="comments"):
     article_mappings = {
         "properties": {
-            "title": {"type": "text",
-                      "fields": {"russian": {"type": "text", "analyzer": "russian"},
-                                 "english": {"type": "text", "analyzer": "english"}
-                                 }
-                      },
-            "content": {"type": "text",
-                        "fields": {"russian": {"type": "text", "analyzer": "russian"},
-                                   "english": {"type": "text", "analyzer": "english"}
-                                   }
-                        },
-            "date": {"type": "date"}
-             }
-        }
-
-    comments_mappings = {
-        "properties": {
-            "content": {"type": "text",
-                        "fields": {"russian": {"type": "text", "analyzer": "russian"},
-                                   "english": {"type": "text", "analyzer": "english"}
-                                   }
-                        }
+            "title": {
+                "type": "text",
+                "fields": {
+                    "russian": {"type": "text", "analyzer": "russian"},
+                    "english": {"type": "text", "analyzer": "english"},
+                },
+            },
+            "content": {
+                "type": "text",
+                "fields": {
+                    "russian": {"type": "text", "analyzer": "russian"},
+                    "english": {"type": "text", "analyzer": "english"},
+                },
+            },
+            "date": {"type": "date"},
         }
     }
 
-    es.indices.create(
-        index="articles",
-        mappings=article_mappings
-    )
+    comments_mappings = {
+        "properties": {
+            "content": {
+                "type": "text",
+                "fields": {
+                    "russian": {"type": "text", "analyzer": "russian"},
+                    "english": {"type": "text", "analyzer": "english"},
+                },
+            }
+        }
+    }
 
-    es.indices.create(
-        index="comments",
-        mappings=comments_mappings
-    )
+    es.indices.create(index="articles", mappings=article_mappings)
+
+    es.indices.create(index="comments", mappings=comments_mappings)
 
 
 @app.post("/create_article")
-async def create_article(
-        title: str,
-        content: str,
-        tags: list[str],
-        author: str
-):
+async def create_article(title: str, content: str, tags: list[str], author: str):
     """
         **Создание статьи.**
 
@@ -115,7 +111,7 @@ async def create_article(
         tags=tags,
         author=author,
         date=datetime.today().strftime("%Y-%m-%d"),
-        content_indexes=list(range(len(content.split())))
+        content_indexes=list(range(len(content.split()))),
     ).model_dump()
 
     try:
@@ -123,13 +119,10 @@ async def create_article(
         res = ApiResult(
             status="ok",
             message="article created",
-            result={"article_id": response.get("_id")}
+            result={"article_id": response.get("_id")},
         )
     except BadRequestError as err:
-        res = ApiResult(
-            status="error",
-            message=f"{err}"
-        )
+        res = ApiResult(status="error", message=f"{err}")
     return JSONResponse(res())
 
 
@@ -155,7 +148,7 @@ async def edit_article_content(article_id: str, article_text: str):
     body = {
         "doc": {
             "content": article_text,
-            "content_indexes": list(range(len(article_text.split())))
+            "content_indexes": list(range(len(article_text.split()))),
         }
     }
 
@@ -163,13 +156,13 @@ async def edit_article_content(article_id: str, article_text: str):
         response = es.update(index="articles", id=article_id, body=body)
         res = ApiResult(
             status="ok",
-            result={"updated": response.get("result"), "version": response.get("_version")}
+            result={
+                "updated": response.get("result"),
+                "version": response.get("_version"),
+            },
         )
     except Exception as err:
-        res = ApiResult(
-            status="error",
-            message=f"{err}"
-        )
+        res = ApiResult(status="error", message=f"{err}")
 
     return res()
 
@@ -193,30 +186,23 @@ async def delete_article(article_id: str):
 
     try:
         response = es.delete(index="articles", id=article_id)
-        res = ApiResult(
-            status="ok",
-            result={"status": response.get("result")}
-        )
+        res = ApiResult(status="ok", result={"status": response.get("result")})
     except NotFoundError:
         res = ApiResult(
-            status="error",
-            message=f"Article with id {article_id} does not exist"
+            status="error", message=f"Article with id {article_id} does not exist"
         )
     except Exception as err:
-        res = ApiResult(
-            status="error",
-            message=f"{err}"
-        )
+        res = ApiResult(status="error", message=f"{err}")
     return JSONResponse(res())
 
 
 @app.post("/add_comment")
 async def add_comment(
-        article_id: str,
-        comment_start_index: int,
-        comment_end_index: int,
-        content: str,
-        author: str
+    article_id: str,
+    comment_start_index: int,
+    comment_end_index: int,
+    content: str,
+    author: str,
 ):
     """
     **Добавление комментария к статье.**
@@ -247,7 +233,7 @@ async def add_comment(
         comment_end_index=comment_end_index,
         date=datetime.today().strftime("%Y-%m-%d"),
         content=content,
-        author=author
+        author=author,
     ).model_dump()
 
     try:
@@ -255,13 +241,10 @@ async def add_comment(
         res = ApiResult(
             status="ok",
             message="comment published",
-            result={"comment_id": response.get("_id")}
+            result={"comment_id": response.get("_id")},
         )
     except BadRequestError as err:
-        res = ApiResult(
-            status="error",
-            message=f"{err}"
-        )
+        res = ApiResult(status="error", message=f"{err}")
     return JSONResponse(res())
 
 
@@ -284,23 +267,19 @@ async def edit_comment(comment_id: str, comment_text: str):
 
     """
 
-    body = {
-        "doc": {
-            "content": comment_text
-        }
-    }
+    body = {"doc": {"content": comment_text}}
 
     try:
         response = es.update(index="comments", id=comment_id, body=body)
         res = ApiResult(
             status="ok",
-            result={"updated": response.get("result"), "version": response.get("_version")}
+            result={
+                "updated": response.get("result"),
+                "version": response.get("_version"),
+            },
         )
     except Exception as err:
-        res = ApiResult(
-            status="error",
-            message=f"{err}"
-        )
+        res = ApiResult(status="error", message=f"{err}")
 
     return res()
 
@@ -324,20 +303,13 @@ async def delete_comment(comment_id: str):
 
     try:
         response = es.delete(index="comments", id=comment_id)
-        res = ApiResult(
-            status="ok",
-            result={"status": response.get("result")}
-        )
+        res = ApiResult(status="ok", result={"status": response.get("result")})
     except NotFoundError:
         res = ApiResult(
-            status="error",
-            message=f"Comment with id {comment_id} does not exist"
+            status="error", message=f"Comment with id {comment_id} does not exist"
         )
     except Exception as err:
-        res = ApiResult(
-            status="error",
-            message=f"{err}"
-        )
+        res = ApiResult(status="error", message=f"{err}")
     return JSONResponse(res())
 
 
@@ -361,9 +333,15 @@ async def search_articles(query: str):
         "query": {
             "multi_match": {
                 "query": query,
-                "fields": ["title", "title.russian", "title.english",
-                           "content", "content.russian", "content.english"],
-                "type": "most_fields"
+                "fields": [
+                    "title",
+                    "title.russian",
+                    "title.english",
+                    "content",
+                    "content.russian",
+                    "content.english",
+                ],
+                "type": "most_fields",
             }
         }
     }
@@ -371,24 +349,20 @@ async def search_articles(query: str):
     try:
         response = es.search(index="articles", body=body)
         print(response)
-        articles = [{
-            "title": hit.get("_source").get("title"),
-            "content": hit.get("_source").get("content"),
-            "author": hit.get("_source").get("author"),
-            "tags": hit.get("_source").get("tags"),
-            "content_indexes": hit.get("_source").get("content_indexes")
-        }
-            for hit in response["hits"]["hits"]]
+        articles = [
+            {
+                "title": hit.get("_source").get("title"),
+                "content": hit.get("_source").get("content"),
+                "author": hit.get("_source").get("author"),
+                "tags": hit.get("_source").get("tags"),
+                "content_indexes": hit.get("_source").get("content_indexes"),
+            }
+            for hit in response["hits"]["hits"]
+        ]
 
-        res = ApiResult(
-            status="ok",
-            result={"articles": articles}
-        )
+        res = ApiResult(status="ok", result={"articles": articles})
     except Exception as err:
-        res = ApiResult(
-            status="error",
-            message=f"{err}"
-        )
+        res = ApiResult(status="error", message=f"{err}")
     return JSONResponse(res())
 
 
@@ -413,7 +387,7 @@ async def search_comments(query: str):
         "query": {
             "multi_match": {
                 "content": query,
-                "fields": ["content", "content.russian", "content.english"]
+                "fields": ["content", "content.russian", "content.english"],
             }
         }
     }
@@ -421,26 +395,24 @@ async def search_comments(query: str):
     try:
         response = es.search(index="comments", body=body)
 
-        comments = [{
-            "id": hit.get("_id"),
-            "index": hit.get("_index"),
-            "comment_start_index": hit.get("_source").get("comment_start_index", None),
-            "comment_end_index": hit.get("_source").get("comment_end_index", None),
-            "date": hit.get("_source").get("date", ""),
-            "content": hit.get("_source").get("content", None),
-            "author": hit.get("_source").get("author", None)
-        }
-            for hit in response["hits"]["hits"]]
+        comments = [
+            {
+                "id": hit.get("_id"),
+                "index": hit.get("_index"),
+                "comment_start_index": hit.get("_source").get(
+                    "comment_start_index", None
+                ),
+                "comment_end_index": hit.get("_source").get("comment_end_index", None),
+                "date": hit.get("_source").get("date", ""),
+                "content": hit.get("_source").get("content", None),
+                "author": hit.get("_source").get("author", None),
+            }
+            for hit in response["hits"]["hits"]
+        ]
 
-        res = ApiResult(
-            status="ok",
-            result={"comments": comments}
-        )
+        res = ApiResult(status="ok", result={"comments": comments})
     except Exception as err:
-        res = ApiResult(
-            status="error",
-            message=f"{err}"
-        )
+        res = ApiResult(status="error", message=f"{err}")
     return JSONResponse(res())
 
 
@@ -458,25 +430,21 @@ async def get_all_articles():
 
     try:
         response = es.search(index="articles", body={"query": {"match_all": {}}})
-        articles = [{
-            "id": hit.get("_id"),
-            "index": hit.get("_index"),
-            "title": hit.get("_source").get("title", ""),
-            "content": hit.get("_source").get("content", ""),
-            "tags": hit.get("_source").get("tags", []),
-            "date": hit.get("_source").get("date", ""),
-            "content_indexes": hit.get("_source").get("content_indexes", [])
-        }
-            for hit in response["hits"]["hits"]]
-        res = ApiResult(
-            status="ok",
-            result={"articles": articles}
-        )
+        articles = [
+            {
+                "id": hit.get("_id"),
+                "index": hit.get("_index"),
+                "title": hit.get("_source").get("title", ""),
+                "content": hit.get("_source").get("content", ""),
+                "tags": hit.get("_source").get("tags", []),
+                "date": hit.get("_source").get("date", ""),
+                "content_indexes": hit.get("_source").get("content_indexes", []),
+            }
+            for hit in response["hits"]["hits"]
+        ]
+        res = ApiResult(status="ok", result={"articles": articles})
     except Exception as err:
-        res = ApiResult(
-            status="error",
-            message=f"{err}"
-        )
+        res = ApiResult(status="error", message=f"{err}")
     return JSONResponse(res())
 
 
@@ -501,15 +469,9 @@ async def get_article_by_id(article_id: str):
         response = es.get(index="articles", id=article_id)
         article = Article(**response["_source"]).model_dump()
 
-        res = ApiResult(
-            status="ok",
-            result={"article": article}
-        )
+        res = ApiResult(status="ok", result={"article": article})
     except Exception as err:
-        res = ApiResult(
-            status="error",
-            message=f"{err}"
-        )
+        res = ApiResult(status="error", message=f"{err}")
     return JSONResponse(res())
 
 
@@ -530,37 +492,29 @@ async def get_article_comments(article_id: str):
 
     """
 
-    body = {
-        "query": {
-            "match": {
-                "article_id": article_id
-            }
-        }
-    }
+    body = {"query": {"match": {"article_id": article_id}}}
 
     try:
         response = es.search(index="comments", body=body)
 
-        comments = [{
-            "id": hit.get("_id"),
-            "index": hit.get("_index"),
-            "comment_start_index": hit.get("_source").get("comment_start_index", None),
-            "comment_end_index": hit.get("_source").get("comment_end_index", None),
-            "date": hit.get("_source").get("date", ""),
-            "content": hit.get("_source").get("content", None),
-            "author": hit.get("_source").get("author", None)
-        }
-            for hit in response["hits"]["hits"]]
+        comments = [
+            {
+                "id": hit.get("_id"),
+                "index": hit.get("_index"),
+                "comment_start_index": hit.get("_source").get(
+                    "comment_start_index", None
+                ),
+                "comment_end_index": hit.get("_source").get("comment_end_index", None),
+                "date": hit.get("_source").get("date", ""),
+                "content": hit.get("_source").get("content", None),
+                "author": hit.get("_source").get("author", None),
+            }
+            for hit in response["hits"]["hits"]
+        ]
 
-        res = ApiResult(
-            status="ok",
-            result={"article_comments": comments}
-        )
+        res = ApiResult(status="ok", result={"article_comments": comments})
     except Exception as err:
-        res = ApiResult(
-            status="error",
-            message=f"{err}"
-        )
+        res = ApiResult(status="error", message=f"{err}")
     return JSONResponse(res())
 
 
