@@ -36,6 +36,15 @@ class EsInstance:
                             "english": {"type": "text", "analyzer": "english"},
                         },
                     },
+                    "author": {
+                        "type": "text",
+                        "fields": {
+                            "keyword": {
+                                "type": "keyword",
+                                "ignore_above": 10000
+                            }
+                        }
+                    },
                     "date": {"type": "date"},
                 }
             }
