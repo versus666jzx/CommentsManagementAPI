@@ -1,12 +1,17 @@
+import io
 from typing import Annotated
 
+from api.tools.data_preprocess import preprocess_excel_article, make_article, make_comments
+import pandas as pd
 from elasticsearch import NotFoundError, BadRequestError
-from fastapi import APIRouter, Body
+from fastapi import APIRouter, Body, UploadFile
 from fastapi.responses import JSONResponse
 
 from api.classes.article import Article
 from api.classes.result import ApiResult
 from api.es_tools.es_connection import es_instance
+from api.routes.comment import add_comment
+import json
 
 router = APIRouter(
     prefix="/article", tags=["Article"], responses={404: {"description": "Not found"}}
@@ -54,6 +59,41 @@ async def create_article(article: Article):
     except BadRequestError as err:
         res = ApiResult(status="error", message=f"{err}")
     return JSONResponse(res())
+
+
+@router.post("/create_article_from_excel")
+async def create_article_from_excel(excel_file: UploadFile) -> JSONResponse:
+    article_title, article_author = excel_file.filename.split("_")[0], excel_file.filename.split("_")[1].split(".")[0]
+    article_file = await excel_file.read()
+    data = pd.read_excel(io.BytesIO(article_file))
+    processed_data = preprocess_excel_article(data)
+    res = make_article(processed_data)
+    created = await create_article(
+        Article(
+            title=article_title,
+            content=res["article_content"],
+            tags=[],
+            author=article_author,
+            content_indexes=res["list_indexes"]
+        )
+    )
+    created = json.loads(created.body.decode("utf-8"))
+
+    list_of_comments = make_comments(
+        data=processed_data,
+        article_id=created["result"]["article_id"]
+    )
+
+    for comment in list_of_comments:
+        await add_comment(
+            comment=comment
+        )
+    result = ApiResult(
+        status="ok",
+        result="Article created"
+    )
+
+    return JSONResponse(result())
 
 
 @router.post("/edit_article_content")
@@ -262,7 +302,7 @@ async def get_article_comments(article_id: str):
     body = {"query": {"match": {"article_id": article_id}}}
 
     try:
-        response = es_instance.es.search(index="comments", body=body)
+        response = es_instance.es.search(index="comments", body=body, size=1000)
 
         comments = [
             {
