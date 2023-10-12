@@ -169,7 +169,7 @@ async def delete_article(article_id: Annotated[str, Body(...)]):
 
 
 @router.get("/search_article")
-async def search_articles(query: str):
+async def search_articles(query: str, size: int = 10, get_from: int = 0):
     """
     **Полнотекстовый поиск статей.**
 
@@ -177,6 +177,10 @@ async def search_articles(query: str):
     -----------
     - `query` (str):
         Запрос для полнотекстового поиска статей.
+    - `size` (int):
+        Количество возвращаемых статей.
+    - `get_from` (int)
+        Стартовая позиция поиска.
 
     Возвращает:
     -----------
@@ -202,7 +206,7 @@ async def search_articles(query: str):
     }
 
     try:
-        response = es_instance.es.search(index="articles", body=body)
+        response = es_instance.es.search(index="articles", body=body, size=size, from_=get_from)
         print(response)
         articles = [
             {
@@ -222,9 +226,16 @@ async def search_articles(query: str):
 
 
 @router.get("/get_all_articles")
-async def get_all_articles():
+async def get_all_articles(size: int = 10, get_from: int = 0):
     """
     **Получение всех статей.**
+
+    Параметры:
+    -----------
+    - `size` (int):
+        Количество возвращаемых статей.
+    - `get_from` (int)
+        Стартовая позиция поиска.
 
     Возвращает:
     -----------
@@ -235,7 +246,7 @@ async def get_all_articles():
 
     try:
         response = es_instance.es.search(
-            index="articles", body={"query": {"match_all": {}}}
+            index="articles", body={"query": {"match_all": {}}}, size=size, from_=get_from
         )
         articles = [
             {
@@ -358,12 +369,29 @@ def get_all_articles_authors():
 
 
 @router.get("/get_articles_by_author")
-def get_articles_by_author(author_name: str):
+def get_articles_by_author(author_name: str, size: int = 10, get_from: int = 0):
+    """
+    **Получение всех статей от указанного автора.**
+
+    Параметры:
+    -----------
+    - `author_name` (str):
+        Имя автора, статьи которого необходимо получить.
+    - `size` (int):
+        Количество возвращаемых статей.
+    - `get_from` (int)
+        Стартовая позиция поиска.
+
+    Возвращает:
+    -----------
+    `JSONResponse`
+        Ответ в формате JSON со списком комментариев к статье или ошибкой.
+    """
 
     body = {"query": {"match": {"author": author_name}}}
 
     try:
-        response = es_instance.es.search(index="articles", body=body)
+        response = es_instance.es.search(index="articles", body=body, size=size, from_=get_from)
         print(response)
         articles = [
             {

@@ -73,6 +73,6 @@ class EsInstance:
 
 
 es_instance = EsInstance()
-# if settings.DELETE_ALL_INDEXES_ON_STARTUP:
-es_instance.delete_all_indexes()
+if settings.DELETE_ALL_INDEXES_ON_STARTUP:
+    es_instance.delete_all_indexes()
 es_instance.create_index_if_not_exist()
