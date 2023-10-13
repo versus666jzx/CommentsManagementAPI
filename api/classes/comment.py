@@ -1,12 +1,14 @@
-from typing import Union, Optional
+from __future__ import annotations
 
-from pydantic import BaseModel
+from datetime import datetime
+
+from pydantic import BaseModel, Field
 
 
 class Comment(BaseModel):
-    article_id: Union[int, str]
+    article_id: int | str
     comment_start_index: int
     comment_end_index: int
-    date: Optional[str]
+    date: str | None = Field(default=datetime.today().strftime("%Y-%m-%d"))
     content: str
     author: str
