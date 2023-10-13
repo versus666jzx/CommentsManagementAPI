@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
-from es_tools.es_connection import es_instance
-from routes import article, comment
+from api.es_tools.es_connection import es_instance
+from api.routes import article, comment
 
 app = FastAPI(
     title="API электронной библиотеки текстов",
