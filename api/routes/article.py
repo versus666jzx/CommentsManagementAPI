@@ -1,7 +1,7 @@
 import io
+import json
 from typing import Annotated
 
-from api.tools.data_preprocess import preprocess_excel_article, make_article, make_comments
 import pandas as pd
 from elasticsearch import NotFoundError, BadRequestError
 from fastapi import APIRouter, Body, UploadFile
@@ -11,7 +11,8 @@ from api.classes.article import Article
 from api.classes.result import ApiResult
 from api.es_tools.es_connection import es_instance
 from api.routes.comment import add_comment
-import json
+from api.tools.data_preprocess import preprocess_excel_article, make_article, make_comments
+
 
 router = APIRouter(
     prefix="/article", tags=["Article"], responses={404: {"description": "Not found"}}
