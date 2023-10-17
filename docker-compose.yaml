@@ -36,6 +36,19 @@ services:
         limits:
           memory: 4000M
 
+  postgres:
+    container_name: postgres
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+      PGDATA: "/data/postgres"
+    volumes:
+       - postgres:/data/postgres
+       - ./docker_postgres_init.sql:/docker-entrypoint-initdb.d/docker_postgres_init.sql
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
 
 networks:
   elastic:
@@ -43,4 +56,6 @@ networks:
 
 volumes:
   es-data:
+    driver: local
+  postgres:
     driver: local

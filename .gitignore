@@ -1,6 +1,8 @@
 *
+
 !api/*
 !docker-compose.yaml
+!docker_postgres_init.sql
 !Dockerfile
 !README.md
 !requirements.txt
