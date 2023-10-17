@@ -14,3 +14,8 @@ class Settings(BaseSettings):
     ES_VERIFY_CERTS: bool = Field(default=False)
     # атрибуты
     DELETE_ALL_INDEXES_ON_STARTUP: bool = Field(default=False)
+    # настройки Postgres
+    PG_USER: str = Field(default="postgres")
+    PG_PASSWORD: str = Field(default="postgres")
+    PG_HOST: str = Field(default="localhost")
+    PG_PORT: str | int = Field(default="5432")
