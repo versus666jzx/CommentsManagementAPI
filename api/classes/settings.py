@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     # настройки ES
     ES_PASSWORD: str = Field(default="elastic")
     ES_USER: str = Field(default="elastic")
-    ES_PROTO: str = Field(default="https")
+    ES_PROTO: str = Field(default="http")
     ES_HOST: str = Field(default="elastic")
     ES_PORT: str | int = Field(default="9200")
     ES_VERIFY_CERTS: bool = Field(default=False)
@@ -17,5 +17,5 @@ class Settings(BaseSettings):
     # настройки Postgres
     PG_USER: str = Field(default="postgres")
     PG_PASSWORD: str = Field(default="postgres")
-    PG_HOST: str = Field(default="localhost")
+    PG_HOST: str = Field(default="postgres")
     PG_PORT: str | int = Field(default="5432")

@@ -3,7 +3,7 @@ from fastapi.responses import RedirectResponse
 
 from api.es_tools.es_connection import es_instance
 from api.postgres_tools.postgres_connection import pg_instance
-from api.routes import article, comment
+from api.routes import article, comment, pg_article
 
 app = FastAPI(
     title="API электронной библиотеки текстов",
@@ -26,6 +26,7 @@ _result_ - содержит результат выполнения запрос
 
 app.include_router(article.router)
 app.include_router(comment.router)
+app.include_router(pg_article.pg_article_router)
 
 
 @app.get("/", tags=["Service"])

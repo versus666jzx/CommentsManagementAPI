@@ -1,11 +1,14 @@
 create table articles
 (
-    row_id          serial,
-    article_id      text,
-    title           text,
-    tags            text[],
-    date            timestamp,
-    content_indexes integer[]
+    row_id                serial,
+    article_id            text,
+    title                 text,
+    tags                  text[],
+    date                  timestamp,
+    content_indexes       integer[],
+    row_content           text,
+    author                text,
+    row_number_in_article integer
 );
 
 alter table articles
@@ -31,4 +34,3 @@ alter table comments
 
 create index comments_article_id_index
     on comments (article_id);
-

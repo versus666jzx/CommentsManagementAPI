@@ -10,12 +10,15 @@ services:
     depends_on:
       elastic:
         condition: "service_started"
+      postgres:
+        condition: "service_started"
     ports:
       - "80:80"
     networks:
       - elastic
     links:
       - elastic
+      - postgres
 
   elastic:
     image: elastic/elasticsearch:8.9.1
@@ -38,17 +41,19 @@ services:
 
   postgres:
     container_name: postgres
-    image: postgres:latest
+    image: postgres:16.0
+    restart: unless-stopped
     environment:
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "postgres"
       PGDATA: "/data/postgres"
     volumes:
        - postgres:/data/postgres
-       - ./docker_postgres_init.sql:/docker-entrypoint-initdb.d/docker_postgres_init.sql
+       - ${PWD}/create_tables/docker_postgres_init.sql:/docker-entrypoint-initdb.d/docker_postgres_init.sql
+    networks:
+      - elastic
     ports:
       - "5432:5432"
-    restart: unless-stopped
 
 networks:
   elastic:

@@ -8,19 +8,17 @@ settings = Settings()
 
 @dataclass
 class PGInstance:
-    def __init__(self):
-        self.pg_connect = connect(
-            host=settings.PG_HOST,
-            port=settings.PG_PORT,
-            user=settings.PG_USER,
-            password=settings.PG_PASSWORD,
-            dbname="public",
-            autocommit=True,
-            options="-c statement_timeout=300000",
-        )
+    pg_connect = connect(
+        host=settings.PG_HOST,
+        port=settings.PG_PORT,
+        user=settings.PG_USER,
+        password=settings.PG_PASSWORD,
+        options="-c statement_timeout=300000",
+    )
 
     def __post_init__(self):
         self.pg_connect.autocommit = True
+        self.cursor = self.pg_connect.cursor()
 
     def close_connection(self):
         self.pg_connect.close()

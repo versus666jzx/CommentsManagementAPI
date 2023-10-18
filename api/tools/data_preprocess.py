@@ -36,6 +36,7 @@ def find_word_indexes(source: str, search: str) -> tuple[int, int]:
 
 
 def preprocess_excel_article(article_dataframe: pd.DataFrame) -> pd.DataFrame:
+    article_dataframe = article_dataframe.astype({"Номер строки текста для отображения": pd.Int16Dtype()})
     article_dataframe["Комментарий"] = (
         article_dataframe["Комментарий"].replace("-", "").replace(pd.NA, "")
     )
@@ -51,7 +52,7 @@ def preprocess_excel_article(article_dataframe: pd.DataFrame) -> pd.DataFrame:
             "Комментируемое слово": set,
             "Комментарий": set,
         }
-    )
+    ).reset_index()
     counter = TokenCounter()
     grouped_data["list_tokens"] = grouped_data["Строка"].apply(lambda x: get_list(x, counter))
 
