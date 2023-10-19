@@ -153,7 +153,7 @@ async def search_comments(query: str):
     body = {
         "query": {
             "multi_match": {
-                "content": query,
+                "query": query,
                 "fields": ["content", "content.russian", "content.english"],
             }
         }
