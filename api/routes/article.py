@@ -18,6 +18,7 @@ from api.tools.data_preprocess import (
     make_comments,
 )
 from api.postgres_tools.pg_scripts import insert_article_in_pg, insert_comments_in_pg
+from api.postgres_tools.postgres_connection import pg_instance
 
 
 router = APIRouter(
@@ -108,6 +109,7 @@ async def create_article_from_excel(excel_file: UploadFile) -> JSONResponse:
                 comment.date,
                 comment.content,
                 comment.author,
+                comment.row_number_in_article,
             )
         )
 
@@ -122,7 +124,9 @@ async def create_article_from_excel(excel_file: UploadFile) -> JSONResponse:
 
     insert_comments_in_pg(comments_batch=created_comments_batch)
 
-    result = ApiResult(status="ok", result={"article_id": created["result"]["article_id"]})
+    result = ApiResult(
+        status="ok", result={"article_id": created["result"]["article_id"]}
+    )
 
     return JSONResponse(result())
 
@@ -196,6 +200,23 @@ async def delete_article(article_id: Annotated[str, Body(...)]):
         )
     except Exception as err:
         res = ApiResult(status="error", message=f"{err}")
+    return JSONResponse(res())
+
+
+@router.post("/update_article_content_by_row")
+async def update_article_content_by_row(article_id: str, new_content: str, article_row: int):
+    sql = """
+    UPDATE articles
+    SET row_content = %s
+    WHERE article_id = %s
+    AND row_number_in_article = %s;
+    """
+
+    pg_instance.cursor.execute(sql, (new_content, article_id, article_row))
+    res = ApiResult(
+        status="ok",
+        result={"update_result": "article content updated"}
+    )
     return JSONResponse(res())
 
 
@@ -371,3 +392,60 @@ async def get_article_comments(article_id: str):
         res = ApiResult(status="error", message=f"{err}")
     return JSONResponse(res())
 
+
+@router.get("/get_article_by_rows")
+async def get_article(article_id: str, from_row: int = 0, num_rows: int = 0):
+
+    list_rows = []
+
+    if num_rows == 0:
+        sql = """
+                 SELECT row_id, article_id, title, tags, date::text, content_indexes, row_content, author, row_number_in_article
+                 FROM articles
+                 WHERE article_id = %s AND %s < row_number_in_article
+                 ORDER BY row_number_in_article;
+              """
+        pg_instance.cursor.execute(sql, (article_id, from_row))
+        res = pg_instance.cursor.fetchall()
+        for row in res:
+            list_rows.append(
+                {
+                    "row_id": row[0],
+                    "article_id": row[1],
+                    "title": row[2],
+                    "tags": row[3],
+                    "date": row[4],
+                    "content_indexes": row[5],
+                    "row_content": row[6],
+                    "author": row[7],
+                    "row_number_in_article": row[8],
+                }
+            )
+    else:
+        sql = """
+                 SELECT row_id, article_id, title, tags, date::text, content_indexes, row_content, author, row_number_in_article
+                 FROM articles
+                 WHERE article_id = %s AND %s < row_number_in_article AND row_number_in_article <= %s
+                 ORDER BY row_number_in_article;
+              """
+        end_row = from_row + num_rows
+        pg_instance.cursor.execute(sql, (article_id, from_row, end_row))
+        res = pg_instance.cursor.fetchall()
+        for row in res:
+            list_rows.append(
+                {
+                    "row_id": row[0],
+                    "article_id": row[1],
+                    "title": row[2],
+                    "tags": row[3],
+                    "date": row[4],
+                    "content_indexes": row[5],
+                    "row_content": row[6],
+                    "author": row[7],
+                    "row_number_in_article": row[8],
+                }
+            )
+
+    res = ApiResult(status="ok", result={"article_rows": list_rows})
+
+    return JSONResponse(res())
