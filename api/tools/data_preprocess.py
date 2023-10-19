@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 import re
-from api.classes.comment import Comment
+from api.classes.comment import PGComment
 
 
 class TokenCounter:
@@ -70,9 +70,9 @@ def make_article(data: pd.DataFrame) -> dict[str, str | list]:
     return {"article_content": article_content, "list_indexes": article_list_indexes}
 
 
-def make_comments(data: pd.DataFrame, article_id: str | int) -> list[Comment]:
+def make_comments(data: pd.DataFrame, article_id: str | int) -> list[PGComment]:
     list_comments = []
-    for idx, row in data[["Строка", "list_tokens", "Комментируемое слово", "Комментарий"]].iterrows():
+    for idx, row in data[["Строка", "list_tokens", "Комментируемое слово", "Комментарий", "Номер строки текста для отображения"]].iterrows():
         indexes = []
         for comment in row["Комментируемое слово"]:
             if comment != "":
@@ -86,12 +86,13 @@ def make_comments(data: pd.DataFrame, article_id: str | int) -> list[Comment]:
                         comment_start_index = row["list_tokens"][index[0]]
                         comment_end_index = row["list_tokens"][index[-1]]
                     list_comments.append(
-                        Comment(
+                        PGComment(
                             article_id=article_id,
                             comment_start_index=comment_start_index,
                             comment_end_index=comment_end_index,
                             content=comment_content,
-                            author="Unknown"
+                            author="Unknown",
+                            row_number_in_article=row["Номер строки текста для отображения"]
                         )
                     )
             except TypeError:
