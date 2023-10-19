@@ -37,8 +37,8 @@ def insert_article_in_pg(
 
 def insert_comments_in_pg(comments_batch):
     sql = """
-    INSERT INTO comments (comment_id, article_id, comment_start_index, comment_end_index, date, content, author) 
-    VALUES (%s, %s, %s, %s, %s, %s, %s) 
+    INSERT INTO comments (comment_id, article_id, comment_start_index, comment_end_index, date, content, author, row_number_in_article) 
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s) 
     """
 
     execute_batch(pg_instance.cursor, sql, comments_batch)
