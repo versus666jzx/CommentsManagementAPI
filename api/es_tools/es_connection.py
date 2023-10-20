@@ -17,9 +17,7 @@ class EsInstance:
         self.es.close()
 
     def create_index_if_not_exist(self):
-        if not self.es.indices.exists(index="articles") or not self.es.indices.exists(
-            index="comments"
-        ):
+        if not self.es.indices.exists(index="articles") or not self.es.indices.exists(index="comments"):
             article_mappings = {
                 "properties": {
                     "title": {

@@ -1,5 +1,6 @@
 import io
 import json
+from datetime import datetime
 from typing import Annotated
 
 import pandas as pd
@@ -11,7 +12,12 @@ from api.classes.article import Article
 from api.classes.result import ApiResult
 from api.es_tools.es_connection import es_instance
 from api.routes.comment import add_comment
-from api.tools.data_preprocess import preprocess_excel_article, make_article, make_comments
+from api.tools.data_preprocess import (
+    preprocess_excel_article,
+    make_article,
+    make_comments,
+)
+from api.postgres_tools.pg_scripts import insert_article_in_pg, insert_comments_in_pg
 
 
 router = APIRouter(
@@ -64,7 +70,10 @@ async def create_article(article: Article):
 
 @router.post("/create_article_from_excel")
 async def create_article_from_excel(excel_file: UploadFile) -> JSONResponse:
-    article_title, article_author = excel_file.filename.split("_")[0], excel_file.filename.split("_")[1].split(".")[0]
+    article_title, article_author = (
+        excel_file.filename.split("_")[0],
+        excel_file.filename.split("_")[1].split(".")[0],
+    )
     article_file = await excel_file.read()
     data = pd.read_excel(io.BytesIO(article_file))
     processed_data = preprocess_excel_article(data)
@@ -75,24 +84,45 @@ async def create_article_from_excel(excel_file: UploadFile) -> JSONResponse:
             content=res["article_content"],
             tags=[],
             author=article_author,
-            content_indexes=res["list_indexes"]
+            content_indexes=res["list_indexes"],
         )
     )
     created = json.loads(created.body.decode("utf-8"))
 
     list_of_comments = make_comments(
-        data=processed_data,
-        article_id=created["result"]["article_id"]
+        data=processed_data, article_id=created["result"]["article_id"]
     )
 
+    created_comments_batch = []
     for comment in list_of_comments:
-        await add_comment(
-            comment=comment
+        res = await add_comment(comment=comment)
+
+        res = json.loads(res.body.decode("utf-8"))
+
+        created_comments_batch.append(
+            (
+                res["result"]["comment_id"],
+                created["result"]["article_id"],
+                comment.comment_start_index,
+                comment.comment_end_index,
+                comment.date,
+                comment.content,
+                comment.author,
+            )
         )
-    result = ApiResult(
-        status="ok",
-        result="Article created"
+
+    insert_article_in_pg(
+        article_id=created["result"]["article_id"],
+        title=article_title,
+        tags=[],
+        date=datetime.now().strftime("%Y-%m-%d"),
+        author=article_author,
+        data=processed_data,
     )
+
+    insert_comments_in_pg(comments_batch=created_comments_batch)
+
+    result = ApiResult(status="ok", result={"article_id": created["result"]["article_id"]})
 
     return JSONResponse(result())
 
@@ -207,7 +237,9 @@ async def search_articles(query: str, size: int = 10, get_from: int = 0):
     }
 
     try:
-        response = es_instance.es.search(index="articles", body=body, size=size, from_=get_from)
+        response = es_instance.es.search(
+            index="articles", body=body, size=size, from_=get_from
+        )
         print(response)
         articles = [
             {
@@ -247,7 +279,10 @@ async def get_all_articles(size: int = 10, get_from: int = 0):
 
     try:
         response = es_instance.es.search(
-            index="articles", body={"query": {"match_all": {}}}, size=size, from_=get_from
+            index="articles",
+            body={"query": {"match_all": {}}},
+            size=size,
+            from_=get_from,
         )
         articles = [
             {
@@ -336,76 +371,3 @@ async def get_article_comments(article_id: str):
         res = ApiResult(status="error", message=f"{err}")
     return JSONResponse(res())
 
-
-@router.get("/get_all_articles_authors")
-def get_all_articles_authors():
-    """
-    **Получение списка всех авторов.**
-
-    Возвращает:
-    -----------
-    `JSONResponse`
-        Ответ в формате JSON со списком авторов.
-
-    """
-
-    body = {
-        "aggs": {
-            "author": {
-                "terms": {
-                    "field": "author.keyword",
-                    "size": 10
-                }
-            }
-        }
-    }
-    
-    try:
-        response = es_instance.es.search(index="articles", body=body)
-        authors_list = list({hit.get("_source").get("author", None) for hit in response["hits"]["hits"]})
-        res = ApiResult(status="ok", result={"authors_list": authors_list})
-    except Exception as err:
-        res = ApiResult(status="error", message=f"{err}")
-    return JSONResponse(res())
-
-
-@router.get("/get_articles_by_author")
-def get_articles_by_author(author_name: str, size: int = 10, get_from: int = 0):
-    """
-    **Получение всех статей от указанного автора.**
-
-    Параметры:
-    -----------
-    - `author_name` (str):
-        Имя автора, статьи которого необходимо получить.
-    - `size` (int):
-        Количество возвращаемых статей.
-    - `get_from` (int)
-        Стартовая позиция поиска.
-
-    Возвращает:
-    -----------
-    `JSONResponse`
-        Ответ в формате JSON со списком комментариев к статье или ошибкой.
-    """
-
-    body = {"query": {"match": {"author": author_name}}}
-
-    try:
-        response = es_instance.es.search(index="articles", body=body, size=size, from_=get_from)
-        print(response)
-        articles = [
-            {
-                "title": hit.get("_source").get("title"),
-                "content": hit.get("_source").get("content"),
-                "author": hit.get("_source").get("author"),
-                "tags": hit.get("_source").get("tags"),
-                "content_indexes": hit.get("_source").get("content_indexes"),
-            }
-            for hit in response["hits"]["hits"]
-        ]
-
-        res = ApiResult(status="ok", result={"article_comments": articles})
-    except Exception as err:
-        res = ApiResult(status="error", message=f"{err}")
-    return JSONResponse(res())
