@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from api.classes.comment import Comment
 from api.classes.result import ApiResult
 from api.es_tools.es_connection import es_instance
+from api.postgres_tools.postgres_connection import pg_instance
 
 router = APIRouter(
     prefix="/comment", tags=["Comment"], responses={404: {"description": "Not found"}}
@@ -88,7 +89,7 @@ async def edit_comment(
     return res()
 
 
-@router.post("delete_comment")
+@router.post("/delete_comment")
 async def delete_comment(comment_id: Annotated[str, Body(...)]):
     """
     **Удаление комментария по его ID.**
@@ -117,6 +118,21 @@ async def delete_comment(comment_id: Annotated[str, Body(...)]):
     return JSONResponse(res())
 
 
+@router.post("/update_comment_in_row")
+async def update_comment_in_row(comment_id: str, new_content: str):
+    sql = """
+    UPDATE comments
+    SET content = %s
+    WHERE comment_id = %s;
+    """
+    pg_instance.cursor.execute(sql, (new_content, comment_id))
+    res = ApiResult(
+        status="ok",
+        result={"update_result": "comment_updated"}
+    )
+    return JSONResponse(res())
+
+
 @router.get("/search_comments")
 async def search_comments(query: str):
     """
@@ -137,7 +153,7 @@ async def search_comments(query: str):
     body = {
         "query": {
             "multi_match": {
-                "content": query,
+                "query": query,
                 "fields": ["content", "content.russian", "content.english"],
             }
         }
@@ -164,4 +180,65 @@ async def search_comments(query: str):
         res = ApiResult(status="ok", result={"comments": comments})
     except Exception as err:
         res = ApiResult(status="error", message=f"{err}")
+    return JSONResponse(res())
+
+
+@router.get("/get_comments_by_rows")
+async def get_article(article_id: str, from_row: int = 0, num_rows: int = 0):
+    article_comments = []
+
+    if num_rows == 0:
+        sql = """
+        SELECT row_id, comment_id, article_id, comment_start_index, comment_end_index, date::text, content, author, row_number_in_article
+        FROM comments
+        WHERE article_id = %s AND %s < row_number_in_article
+        ORDER BY row_number_in_article;
+        """
+
+        pg_instance.cursor.execute(sql, (article_id, from_row))
+        res = pg_instance.cursor.fetchall()
+
+        for comment_row in res:
+            article_comments.append(
+                {
+                    "row_id": comment_row[0],
+                    "comment_id": comment_row[1],
+                    "article_id": comment_row[2],
+                    "comment_start_index": comment_row[3],
+                    "comment_end_index": comment_row[4],
+                    "date": comment_row[5],
+                    "content": comment_row[6],
+                    "author": comment_row[7],
+                    "row_number_in_article": comment_row[8],
+                }
+            )
+    else:
+        sql = """
+        SELECT row_id, comment_id, article_id, comment_start_index, comment_end_index, date::text, content, author, row_number_in_article
+        FROM comments
+        WHERE article_id = %s AND %s < row_number_in_article AND row_number_in_article <= %s
+        ORDER BY row_number_in_article;
+        """
+
+        end_row = from_row + num_rows
+        pg_instance.cursor.execute(sql, (article_id, from_row, end_row))
+        res = pg_instance.cursor.fetchall()
+
+        for comment_row in res:
+            article_comments.append(
+                {
+                    "row_id": comment_row[0],
+                    "comment_id": comment_row[1],
+                    "article_id": comment_row[2],
+                    "comment_start_index": comment_row[3],
+                    "comment_end_index": comment_row[4],
+                    "date": comment_row[5],
+                    "content": comment_row[6],
+                    "author": comment_row[7],
+                    "row_number_in_article": comment_row[8],
+                }
+            )
+
+    res = ApiResult(status="ok", result={"article_comments": article_comments})
+
     return JSONResponse(res())

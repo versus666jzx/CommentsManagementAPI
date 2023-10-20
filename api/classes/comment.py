@@ -12,3 +12,7 @@ class Comment(BaseModel):
     date: str | None = Field(default=datetime.today().strftime("%Y-%m-%d"))
     content: str
     author: str
+
+
+class PGComment(Comment):
+    row_number_in_article: int

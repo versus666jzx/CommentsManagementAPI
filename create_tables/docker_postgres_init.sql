@@ -17,16 +17,20 @@ alter table articles
 create index articles_article_id_index
     on articles (article_id);
 
+create index articles_article_id_row_id_index
+    on articles (article_id, row_id);
+
 create table comments
 (
-    row_id              serial,
-    comment_id          text,
-    article_id          text,
-    comment_start_index integer,
-    comment_end_index   integer,
-    date                timestamp,
-    content             text,
-    author              text
+    row_id                serial,
+    comment_id            text,
+    article_id            text,
+    comment_start_index   integer,
+    comment_end_index     integer,
+    date                  timestamp,
+    content               text,
+    author                text,
+    row_number_in_article integer
 );
 
 alter table comments
@@ -34,3 +38,4 @@ alter table comments
 
 create index comments_article_id_index
     on comments (article_id);
+
