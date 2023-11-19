@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
+
 
 from api.es_tools.es_connection import es_instance
 from api.postgres_tools.postgres_connection import pg_instance
@@ -27,6 +29,15 @@ _result_ - содержит результат выполнения запрос
 app.include_router(article.router)
 app.include_router(comment.router)
 
+origins = ['*']
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/", tags=["Service"])
 def redirect_to_doc():
