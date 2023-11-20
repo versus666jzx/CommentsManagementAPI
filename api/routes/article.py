@@ -263,12 +263,13 @@ async def search_articles(query: str, size: int = 10, get_from: int = 0):
         )
         print(response)
         articles = [
-            {
+            {         
+                "id": hit.get("_id"),
+                "author": hit.get("_source").get("author"),
                 "title": hit.get("_source").get("title"),
                 "content": hit.get("_source").get("content"),
-                "author": hit.get("_source").get("author"),
                 "tags": hit.get("_source").get("tags"),
-                "content_indexes": hit.get("_source").get("content_indexes"),
+                # "content_indexes": hit.get("_source").get("content_indexes"),
             }
             for hit in response["hits"]["hits"]
         ]
@@ -310,10 +311,12 @@ async def get_all_articles(size: int = 10, get_from: int = 0):
                 "id": hit.get("_id"),
                 "index": hit.get("_index"),
                 "title": hit.get("_source").get("title", ""),
-                "content": hit.get("_source").get("content", ""),
+                "author": hit.get("_source").get("author", ""),
+                "content": 'тут будет описание', 
+                # "content": hit.get("_source").get("content", ""),
                 "tags": hit.get("_source").get("tags", []),
                 "date": hit.get("_source").get("date", ""),
-                "content_indexes": hit.get("_source").get("content_indexes", []),
+                # "content_indexes": hit.get("_source").get("content_indexes", []),
             }
             for hit in response["hits"]["hits"]
         ]
@@ -415,7 +418,7 @@ async def get_article(article_id: str, from_row: int = 0, num_rows: int = 0):
                     "title": row[2],
                     "tags": row[3],
                     "date": row[4],
-                    "content_indexes": row[5],
+                    # "content_indexes": row[5],
                     "row_content": row[6],
                     "author": row[7],
                     "row_number_in_article": row[8],
@@ -439,7 +442,7 @@ async def get_article(article_id: str, from_row: int = 0, num_rows: int = 0):
                     "title": row[2],
                     "tags": row[3],
                     "date": row[4],
-                    "content_indexes": row[5],
+                    # "content_indexes": row[5],
                     "row_content": row[6],
                     "author": row[7],
                     "row_number_in_article": row[8],

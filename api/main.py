@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.es_tools.es_connection import es_instance
 from api.postgres_tools.postgres_connection import pg_instance
-from api.routes import article, comment
+from api.routes import article, comment, authors
 
 app = FastAPI(
     title="API электронной библиотеки текстов",
@@ -28,6 +28,7 @@ _result_ - содержит результат выполнения запрос
 
 app.include_router(article.router)
 app.include_router(comment.router)
+app.include_router(authors.router)
 
 origins = ['*']
 

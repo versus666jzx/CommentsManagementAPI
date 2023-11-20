@@ -4,12 +4,12 @@ from fastapi.responses import JSONResponse
 from api.classes.result import ApiResult
 from api.es_tools.es_connection import es_instance
 
-authors_router = APIRouter(
+router = APIRouter(
     prefix="/authors", tags=["Authors"], responses={404: {"description": "Not found"}}
 )
 
 
-@authors_router.get("/get_all_articles_authors")
+@router.get("/get_all_articles_authors")
 def get_all_articles_authors():
     """
     **Получение списка всех авторов.**
@@ -34,7 +34,7 @@ def get_all_articles_authors():
     return JSONResponse(res())
 
 
-@authors_router.get("/get_articles_by_author")
+@router.get("/get_articles_by_author")
 def get_articles_by_author(author_name: str, size: int = 10, get_from: int = 0):
     """
     **Получение всех статей от указанного автора.**
@@ -67,7 +67,7 @@ def get_articles_by_author(author_name: str, size: int = 10, get_from: int = 0):
                 "content": hit.get("_source").get("content"),
                 "author": hit.get("_source").get("author"),
                 "tags": hit.get("_source").get("tags"),
-                "content_indexes": hit.get("_source").get("content_indexes"),
+                # "content_indexes": hit.get("_source").get("content_indexes"),
             }
             for hit in response["hits"]["hits"]
         ]
