@@ -183,7 +183,7 @@ async def search_comments(query: str):
 
 
 @router.get("/get_comments_by_rows")
-async def get_article(article_id: str, from_row: int = 0, num_rows: int = 0):
+async def get_article(article_id: str, from_row: int = 0, num_rows: int = 0, sort_by: str = "desc"):
     article_comments = []
 
     if num_rows == 0:
@@ -238,6 +238,19 @@ async def get_article(article_id: str, from_row: int = 0, num_rows: int = 0):
                 }
             )
 
-    res = ApiResult(status="ok", result={"article_comments": article_comments})
+    if sort_by not in ["desc", "asc"]:
+        res = ApiResult(
+            status="error",
+            message=f"Параметр sort_by может принимать значения 'desc' или 'asc'. Передано значение: {sort_by}"
+        )
+        return JSONResponse(res())
+    
+    if sort_by == "desc":
+        reverse = True
+    else:
+        reverse = False
+
+    sorted_comments = sorted(article_comments, key=lambda x: x["date"], reverse=reverse)
+    res = ApiResult(status="ok", result={"article_comments": sorted_comments})
 
     return JSONResponse(res())
