@@ -17,6 +17,9 @@ alter table articles
 create index articles_article_id_index
     on articles (article_id);
 
+create index articles_article_id_row_id_index
+    on articles (article_id, row_id);
+
 create table comments
 (
     row_id                serial,

@@ -263,12 +263,13 @@ async def search_articles(query: str, size: int = 10, get_from: int = 0):
         )
         print(response)
         articles = [
-            {
+            {         
+                "id": hit.get("_id"),
+                "author": hit.get("_source").get("author"),
                 "title": hit.get("_source").get("title"),
                 "content": hit.get("_source").get("content"),
-                "author": hit.get("_source").get("author"),
                 "tags": hit.get("_source").get("tags"),
-                "content_indexes": hit.get("_source").get("content_indexes"),
+                # "content_indexes": hit.get("_source").get("content_indexes"),
             }
             for hit in response["hits"]["hits"]
         ]
@@ -310,10 +311,12 @@ async def get_all_articles(size: int = 10, get_from: int = 0):
                 "id": hit.get("_id"),
                 "index": hit.get("_index"),
                 "title": hit.get("_source").get("title", ""),
-                "content": hit.get("_source").get("content", ""),
+                "author": hit.get("_source").get("author", ""),
+                "description": 'тут будет описание',  # TODO описание сюда добавить
+                # "content": hit.get("_source").get("content", ""),
                 "tags": hit.get("_source").get("tags", []),
                 "date": hit.get("_source").get("date", ""),
-                "content_indexes": hit.get("_source").get("content_indexes", []),
+                # "content_indexes": hit.get("_source").get("content_indexes", []),
             }
             for hit in response["hits"]["hits"]
         ]

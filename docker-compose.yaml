@@ -13,7 +13,7 @@ services:
       postgres:
         condition: "service_started"
     ports:
-      - "80:80"
+      - "27361:80"
     networks:
       - elastic
     links:

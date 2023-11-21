@@ -89,7 +89,7 @@ async def edit_comment(
     return res()
 
 
-@router.post("delete_comment")
+@router.post("/delete_comment")
 async def delete_comment(comment_id: Annotated[str, Body(...)]):
     """
     **Удаление комментария по его ID.**
@@ -166,9 +166,7 @@ async def search_comments(query: str):
             {
                 "id": hit.get("_id"),
                 "index": hit.get("_index"),
-                "comment_start_index": hit.get("_source").get(
-                    "comment_start_index", None
-                ),
+                "comment_start_index": hit.get("_source").get("comment_start_index", None),
                 "comment_end_index": hit.get("_source").get("comment_end_index", None),
                 "date": hit.get("_source").get("date", ""),
                 "content": hit.get("_source").get("content", None),
