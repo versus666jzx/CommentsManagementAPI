@@ -63,6 +63,7 @@ def get_articles_by_author(author_name: str, size: int = 10, get_from: int = 0):
         print(response)
         articles = [
             {
+                "id": hit.get("_id"),
                 "title": hit.get("_source").get("title"),
                 "content": hit.get("_source").get("content"),
                 "author": hit.get("_source").get("author"),
