@@ -14,7 +14,7 @@ class Article(BaseModel):
     author: str
     date: str | None = Field(default=None)
     content_indexes: list[int] | None = Field(default=None)
-    description: str = 'тут будет описание' # TODO заменить на данные из базы
+    description: str | None = Field(default=None)
 
     def make_metadata(self):
         self.date: Optional[str] = datetime.now().strftime("%Y-%m-%d")

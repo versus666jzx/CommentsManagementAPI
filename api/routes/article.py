@@ -346,7 +346,7 @@ async def get_article_by_id(article_id: str):
     try:
         response = es_instance.es.get(index="articles", id=article_id)
         article = Article(**response["_source"]).model_dump()
-
+        article.update({"article_id": article_id})
         res = ApiResult(status="ok", result={"article": article})
     except Exception as err:
         res = ApiResult(status="error", message=f"{err}")
