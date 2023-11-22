@@ -30,7 +30,8 @@ create table comments
     date                  timestamp,
     content               text,
     author                text,
-    row_number_in_article integer
+    row_number_in_article integer,
+    comment_html          text
 );
 
 alter table comments
