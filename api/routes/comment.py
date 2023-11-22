@@ -31,6 +31,8 @@ async def add_comment(comment: Comment):
         Содержание комментария.
     - `author` (str):
         Автор комментария.
+    - `comment_html` (str):
+        Текст комментария с HTML
 
     Возвращает:
     -----------
@@ -53,7 +55,9 @@ async def add_comment(comment: Comment):
 
 @router.post("/edit_comment")
 async def edit_comment(
-    comment_id: Annotated[str, Body(...)], comment_text: Annotated[str, Body(...)]
+    comment_id: Annotated[str, Body(...)],
+    comment_text: Annotated[str, Body(...)],
+    comment_html: Annotated[str, Body(...)],
 ):
     """
     **Редактирование комментария.**
@@ -64,6 +68,8 @@ async def edit_comment(
         Уникальный идентификатор комментария, который необходимо отредактировать.
     - `comment_text` (str):
         Новое содержание комментария.
+    - `comment_html` (str):
+        Новое содержание HTML-комментария
 
     Возвращает:
     -----------
@@ -72,7 +78,7 @@ async def edit_comment(
 
     """
 
-    body = {"doc": {"content": comment_text}}
+    body = {"doc": {"content": comment_text, "comment_html": comment_html}}
 
     try:
         response = es_instance.es.update(index="comments", id=comment_id, body=body)
@@ -119,22 +125,21 @@ async def delete_comment(comment_id: Annotated[str, Body(...)]):
 
 
 @router.post("/update_comment_in_row")
-async def update_comment_in_row(comment_id: str, new_content: str):
+async def update_comment_in_row(
+    comment_id: str, new_content: str, new_comment_html: str
+):
     sql = """
     UPDATE comments
-    SET content = %s
+    SET content = %s, comment_html = %s
     WHERE comment_id = %s;
     """
-    pg_instance.cursor.execute(sql, (new_content, comment_id))
-    res = ApiResult(
-        status="ok",
-        result={"update_result": "comment_updated"}
-    )
+    pg_instance.cursor.execute(sql, (new_content, new_comment_html, comment_id))
+    res = ApiResult(status="ok", result={"update_result": "comment_updated"})
     return JSONResponse(res())
 
 
 @router.get("/search_comments")
-async def search_comments(query: str):
+async def search_comments(query: str, sort_by: str = "desc"):
     """
     **Поиск комментариев по содержанию.**
 
@@ -142,6 +147,8 @@ async def search_comments(query: str):
     -----------
     - `query` (str):
         Запрос для поиска комментариев по содержанию.
+    - `sort_by` (str):
+        Сортировка по дате создания комментария. Может принимать значения 'desc' или 'asc'.
 
     Возвращает:
     -----------
@@ -166,29 +173,48 @@ async def search_comments(query: str):
             {
                 "id": hit.get("_id"),
                 "index": hit.get("_index"),
-                "comment_start_index": hit.get("_source").get("comment_start_index", None),
+                "comment_start_index": hit.get("_source").get(
+                    "comment_start_index", None
+                ),
                 "comment_end_index": hit.get("_source").get("comment_end_index", None),
                 "date": hit.get("_source").get("date", ""),
                 "content": hit.get("_source").get("content", None),
                 "author": hit.get("_source").get("author", None),
-                "article_id": hit.get("_source").get("article_id", None)
+                "article_id": hit.get("_source").get("article_id", None),
+                "comment_html": hit.get("_source").get("comment_html", None),
             }
             for hit in response["hits"]["hits"]
         ]
 
-        res = ApiResult(status="ok", result={"comments": comments})
+        if sort_by not in ["desc", "asc"]:
+            res = ApiResult(
+                status="error",
+                message=f"Параметр sort_by может принимать значения 'desc' или 'asc'. Передано значение: {sort_by}",
+            )
+            return JSONResponse(res())
+
+        if sort_by == "desc":
+            reverse = True
+        else:
+            reverse = False
+
+        sorted_comments = sorted(comments, key=lambda x: x["date"], reverse=reverse)
+
+        res = ApiResult(status="ok", result={"comments": sorted_comments})
     except Exception as err:
         res = ApiResult(status="error", message=f"{err}")
     return JSONResponse(res())
 
 
 @router.get("/get_comments_by_rows")
-async def get_article(article_id: str, from_row: int = 0, num_rows: int = 0, sort_by: str = "desc"):
+async def get_comments_by_rows(
+    article_id: str, from_row: int = 0, num_rows: int = 0, sort_by: str = "desc"
+):
     article_comments = []
 
     if num_rows == 0:
         sql = """
-        SELECT row_id, comment_id, article_id, comment_start_index, comment_end_index, date::text, content, author, row_number_in_article
+        SELECT row_id, comment_id, article_id, comment_start_index, comment_end_index, date::text, content, author, row_number_in_article, comment_html
         FROM comments
         WHERE article_id = %s AND %s < row_number_in_article
         ORDER BY row_number_in_article;
@@ -209,11 +235,12 @@ async def get_article(article_id: str, from_row: int = 0, num_rows: int = 0, sor
                     "content": comment_row[6],
                     "author": comment_row[7],
                     "row_number_in_article": comment_row[8],
+                    "comment_html": comment_row[9],
                 }
             )
     else:
         sql = """
-        SELECT row_id, comment_id, article_id, comment_start_index, comment_end_index, date::text, content, author, row_number_in_article
+        SELECT row_id, comment_id, article_id, comment_start_index, comment_end_index, date::text, content, author, row_number_in_article, comment_html
         FROM comments
         WHERE article_id = %s AND %s < row_number_in_article AND row_number_in_article <= %s
         ORDER BY row_number_in_article;
@@ -235,16 +262,17 @@ async def get_article(article_id: str, from_row: int = 0, num_rows: int = 0, sor
                     "content": comment_row[6],
                     "author": comment_row[7],
                     "row_number_in_article": comment_row[8],
+                    "comment_html": comment_row[9],
                 }
             )
 
     if sort_by not in ["desc", "asc"]:
         res = ApiResult(
             status="error",
-            message=f"Параметр sort_by может принимать значения 'desc' или 'asc'. Передано значение: {sort_by}"
+            message=f"Параметр sort_by может принимать значения 'desc' или 'asc'. Передано значение: {sort_by}",
         )
         return JSONResponse(res())
-    
+
     if sort_by == "desc":
         reverse = True
     else:

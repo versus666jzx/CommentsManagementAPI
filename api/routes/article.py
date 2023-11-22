@@ -386,6 +386,7 @@ async def get_article_comments(article_id: str):
                 "date": hit.get("_source").get("date", ""),
                 "content": hit.get("_source").get("content", None),
                 "author": hit.get("_source").get("author", None),
+                "comment_html": hit.get("_source").get("comment_html", None),
             }
             for hit in response["hits"]["hits"]
         ]
