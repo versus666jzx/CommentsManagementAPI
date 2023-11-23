@@ -41,8 +41,24 @@ async def add_comment(comment: Comment):
 
     """
 
+    sql = """
+    INSERT INTO comments (comment_id, article_id, comment_start_index, comment_end_index, content, author, comment_html)
+    VALUES (%s, %s, %s, %s, %s, %s, %s)
+    """
+
     try:
         response = es_instance.es.index(index="comments", document=comment.model_dump())
+        pg_instance.cursor.execute(sql, (
+            response.get("_id"),
+            comment.article_id,
+            comment.comment_start_index,
+            comment.comment_end_index,
+            comment.content,
+            comment.author,
+            comment.comment_html
+            )
+        )
+        print(pg_instance.cursor.query)
         res = ApiResult(
             status="ok",
             message="comment published",
@@ -112,8 +128,15 @@ async def delete_comment(comment_id: Annotated[str, Body(...)]):
 
     """
 
+    sql = """
+    DELETE
+    FROM comments
+    WHERE comment_id = %s
+    """
+
     try:
         response = es_instance.es.delete(index="comments", id=comment_id)
+        pg_instance.cursor.execute(sql, (comment_id,))
         res = ApiResult(status="ok", result={"status": response.get("result")})
     except NotFoundError:
         res = ApiResult(
