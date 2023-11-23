@@ -9,7 +9,8 @@ create table articles
     row_content           text,
     author                text,
     row_number_in_article integer,
-    row_number_to_display integer
+    row_number_to_display integer,
+    description           text
 );
 
 alter table articles

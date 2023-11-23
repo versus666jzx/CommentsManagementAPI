@@ -81,6 +81,10 @@ async def create_article_from_excel(excel_file: UploadFile) -> JSONResponse:
     )
     article_file = await excel_file.read()
     data = pd.read_excel(io.BytesIO(article_file))
+    try:
+        article_description = data["description"][0]
+    except Exception:
+        article_description = "Отсутствует"
     processed_data = preprocess_excel_article(data)
     res = make_article(processed_data)
     created = await create_article(
@@ -89,8 +93,8 @@ async def create_article_from_excel(excel_file: UploadFile) -> JSONResponse:
             content=res["article_content"],
             tags=[],
             author=article_author,
-            content_indexes=res["list_indexes"]
-
+            content_indexes=res["list_indexes"],
+            description=article_description
         )
     )
     created = json.loads(created.body.decode("utf-8"))
@@ -125,6 +129,7 @@ async def create_article_from_excel(excel_file: UploadFile) -> JSONResponse:
         date=datetime.now().strftime("%Y-%m-%d"),
         author=article_author,
         data=processed_data,
+        article_description=article_description
     )
 
     insert_comments_in_pg(
@@ -411,7 +416,7 @@ async def get_article(article_id: str, from_row: int = 0, num_rows: int = 0):
 
     if num_rows == 0:
         sql = """
-                 SELECT row_id, article_id, title, tags, date::text, content_indexes, row_content, author, row_number_in_article, row_number_to_display
+                 SELECT row_id, article_id, title, tags, date::text, content_indexes, row_content, author, row_number_in_article, row_number_to_display, description
                  FROM articles
                  WHERE article_id = %s AND %s < row_number_in_article
                  ORDER BY row_number_in_article;
@@ -430,12 +435,13 @@ async def get_article(article_id: str, from_row: int = 0, num_rows: int = 0):
                     "row_content": row[6],
                     "author": row[7],
                     "row_number_in_article": row[8],
-                    "row_number_to_display": row[9]
+                    "row_number_to_display": row[9],
+                    "description": row[10]
                 }
             )
     else:
         sql = """
-                 SELECT row_id, article_id, title, tags, date::text, content_indexes, row_content, author, row_number_in_article, row_number_to_display
+                 SELECT row_id, article_id, title, tags, date::text, content_indexes, row_content, author, row_number_in_article, row_number_to_display, description
                  FROM articles
                  WHERE article_id = %s AND %s < row_number_in_article AND row_number_in_article <= %s
                  ORDER BY row_number_in_article;
@@ -455,7 +461,8 @@ async def get_article(article_id: str, from_row: int = 0, num_rows: int = 0):
                     "row_content": row[6],
                     "author": row[7],
                     "row_number_in_article": row[8],
-                    "row_number_to_display": row[9]
+                    "row_number_to_display": row[9],
+                    "description": row[10]
                 }
             )
 
