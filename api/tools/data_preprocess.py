@@ -36,25 +36,29 @@ def find_word_indexes(source: str, search: str) -> tuple[int, int]:
 
 
 def preprocess_excel_article(article_dataframe: pd.DataFrame) -> pd.DataFrame:
-    article_dataframe = article_dataframe.astype({"Номер строки текста для отображения": pd.Int16Dtype()})
+    article_dataframe = article_dataframe.astype({
+        "Номер строки текста для отображения": pd.Int16Dtype(),
+        "Порядковый номер (по всему тексту)": pd.Int16Dtype()
+    })
     article_dataframe["Комментарий"] = (
         article_dataframe["Комментарий"].replace("-", "").replace(pd.NA, "")
     )
     article_dataframe["Комментируемое слово"] = (
         article_dataframe["Комментируемое слово"].replace("-", "").replace(pd.NA, "")
     )
-
-    grouped_data = article_dataframe.groupby("Номер строки текста для отображения")[
-        ["Строка", "Комментируемое слово", "Комментарий"]
+    grouped_data = article_dataframe.groupby("Порядковый номер (по всему тексту)")[
+        ["Строка", "Комментируемое слово", "Комментарий", "Номер строки текста для отображения"]
     ].agg(
         {
             "Строка": lambda x: set(x).pop(),
             "Комментируемое слово": set,
             "Комментарий": set,
+            "Номер строки текста для отображения": lambda x: set(x).pop()
         }
     ).reset_index()
     counter = TokenCounter()
     grouped_data["list_tokens"] = grouped_data["Строка"].apply(lambda x: get_list(x, counter))
+    grouped_data["Номер строки текста для отображения"].replace({pd.NaT: None}, inplace=True)
 
     return grouped_data
 
@@ -67,12 +71,15 @@ def make_article(data: pd.DataFrame) -> dict[str, str | list]:
         article_content += f" {row['Строка']}"
         article_list_indexes.extend(row["list_tokens"])
 
-    return {"article_content": article_content, "list_indexes": article_list_indexes}
+    return {
+        "article_content": article_content,
+        "list_indexes": article_list_indexes
+    }
 
 
 def make_comments(data: pd.DataFrame, article_id: str | int) -> list[PGComment]:
     list_comments = []
-    for idx, row in data[["Строка", "list_tokens", "Комментируемое слово", "Комментарий", "Номер строки текста для отображения"]].iterrows():
+    for idx, row in data[["Строка", "list_tokens", "Комментируемое слово", "Комментарий", "Порядковый номер (по всему тексту)", "Номер строки текста для отображения"]].iterrows():
         indexes = []
         for comment in row["Комментируемое слово"]:
             if comment != "":
@@ -92,7 +99,7 @@ def make_comments(data: pd.DataFrame, article_id: str | int) -> list[PGComment]:
                             comment_end_index=comment_end_index,
                             content=comment_content,
                             author="Unknown",
-                            row_number_in_article=row["Номер строки текста для отображения"]
+                            row_number_in_article=row["Порядковый номер (по всему тексту)"]
                         )
                     )
             except TypeError:

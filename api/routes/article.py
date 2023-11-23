@@ -47,6 +47,10 @@ async def create_article(article: Article):
     - `content_indexes` (list[int])
         Необязательное поле. Список индексов слов/токенов контента статьи. Необходим для определения позиции
         комментария в статье. Если не задано, то будет посчитано автоматически.
+    - `description` (str)
+        Описание статьи
+    - `row_number_to_display` (int)
+        Необязательное поле. Номер строки для отображения.
 
     Возвращает:
     -----------
@@ -85,7 +89,8 @@ async def create_article_from_excel(excel_file: UploadFile) -> JSONResponse:
             content=res["article_content"],
             tags=[],
             author=article_author,
-            content_indexes=res["list_indexes"],
+            content_indexes=res["list_indexes"]
+
         )
     )
     created = json.loads(created.body.decode("utf-8"))
@@ -122,7 +127,9 @@ async def create_article_from_excel(excel_file: UploadFile) -> JSONResponse:
         data=processed_data,
     )
 
-    insert_comments_in_pg(comments_batch=created_comments_batch)
+    insert_comments_in_pg(
+        comments_batch=created_comments_batch
+    )
 
     result = ApiResult(
         status="ok", result={"article_id": created["result"]["article_id"]}
@@ -404,7 +411,7 @@ async def get_article(article_id: str, from_row: int = 0, num_rows: int = 0):
 
     if num_rows == 0:
         sql = """
-                 SELECT row_id, article_id, title, tags, date::text, content_indexes, row_content, author, row_number_in_article
+                 SELECT row_id, article_id, title, tags, date::text, content_indexes, row_content, author, row_number_in_article, row_number_to_display
                  FROM articles
                  WHERE article_id = %s AND %s < row_number_in_article
                  ORDER BY row_number_in_article;
@@ -423,11 +430,12 @@ async def get_article(article_id: str, from_row: int = 0, num_rows: int = 0):
                     "row_content": row[6],
                     "author": row[7],
                     "row_number_in_article": row[8],
+                    "row_number_to_display": row[9]
                 }
             )
     else:
         sql = """
-                 SELECT row_id, article_id, title, tags, date::text, content_indexes, row_content, author, row_number_in_article
+                 SELECT row_id, article_id, title, tags, date::text, content_indexes, row_content, author, row_number_in_article, row_number_to_display
                  FROM articles
                  WHERE article_id = %s AND %s < row_number_in_article AND row_number_in_article <= %s
                  ORDER BY row_number_in_article;
@@ -447,6 +455,7 @@ async def get_article(article_id: str, from_row: int = 0, num_rows: int = 0):
                     "row_content": row[6],
                     "author": row[7],
                     "row_number_in_article": row[8],
+                    "row_number_to_display": row[9]
                 }
             )
 

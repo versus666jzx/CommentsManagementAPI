@@ -8,7 +8,8 @@ create table articles
     content_indexes       integer[],
     row_content           text,
     author                text,
-    row_number_in_article integer
+    row_number_in_article integer,
+    row_number_to_display integer
 );
 
 alter table articles
