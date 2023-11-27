@@ -46,22 +46,25 @@ async def add_comment(comment: PGComment):
     """
 
     sql = """
-    INSERT INTO comments (comment_id, article_id, comment_start_index, comment_end_index, content, author, comment_html, row_number_in_article)
-    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+    INSERT INTO comments (comment_id, article_id, comment_start_index, comment_end_index, date, content, author, comment_html, row_number_in_article)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
 
     try:
         response = es_instance.es.index(index="comments", document=comment.model_dump())
-        pg_instance.cursor.execute(sql, (
-            response.get("_id"),
-            comment.article_id,
-            comment.comment_start_index,
-            comment.comment_end_index,
-            comment.content,
-            comment.author,
-            comment.comment_html,
-            comment.row_number_in_article
-            )
+        pg_instance.cursor.execute(
+            sql,
+            (
+                response.get("_id"),
+                comment.article_id,
+                comment.comment_start_index,
+                comment.comment_end_index,
+                comment.date,
+                comment.content,
+                comment.author,
+                comment.comment_html,
+                comment.row_number_in_article,
+            ),
         )
 
         res = ApiResult(
