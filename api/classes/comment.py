@@ -9,7 +9,7 @@ class Comment(BaseModel):
     article_id: int | str
     comment_start_index: int
     comment_end_index: int
-    date: str | None = Field(default=datetime.today().strftime("%Y-%m-%d"))
+    date: str = Field(default=datetime.today().strftime("%Y-%m-%d"))
     content: str
     author: str
     comment_html: str | None = Field(default=None)
