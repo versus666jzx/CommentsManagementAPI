@@ -4,7 +4,7 @@ from elasticsearch import NotFoundError, BadRequestError
 from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
 
-from api.classes.comment import Comment
+from api.classes.comment import PGComment
 from api.classes.result import ApiResult
 from api.es_tools.es_connection import es_instance
 from api.postgres_tools.postgres_connection import pg_instance
@@ -15,7 +15,7 @@ router = APIRouter(
 
 
 @router.post("/add_comment")
-async def add_comment(comment: Comment):
+async def add_comment(comment: PGComment):
     """
     **Добавление комментария к статье.**
 
@@ -32,7 +32,9 @@ async def add_comment(comment: Comment):
     - `author` (str):
         Автор комментария.
     - `comment_html` (str):
-        Текст комментария с HTML
+        Текст комментария с HTML.
+    - `row_number_in_article`:
+        Номер строки в статье, которой принадлежит комментарий.
 
     Возвращает:
     -----------
@@ -42,8 +44,8 @@ async def add_comment(comment: Comment):
     """
 
     sql = """
-    INSERT INTO comments (comment_id, article_id, comment_start_index, comment_end_index, content, author, comment_html)
-    VALUES (%s, %s, %s, %s, %s, %s, %s)
+    INSERT INTO comments (comment_id, article_id, comment_start_index, comment_end_index, content, author, comment_html, row_number_in_article)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     """
 
     try:
@@ -55,10 +57,11 @@ async def add_comment(comment: Comment):
             comment.comment_end_index,
             comment.content,
             comment.author,
-            comment.comment_html
+            comment.comment_html,
+            comment.row_number_in_article
             )
         )
-        print(pg_instance.cursor.query)
+
         res = ApiResult(
             status="ok",
             message="comment published",
