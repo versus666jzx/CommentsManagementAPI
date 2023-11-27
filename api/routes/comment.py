@@ -213,6 +213,7 @@ async def search_comments(query: str, sort_by: str = "desc"):
                 "author": hit.get("_source").get("author", None),
                 "article_id": hit.get("_source").get("article_id", None),
                 "comment_html": hit.get("_source").get("comment_html", None),
+                "row_number_in_article": hit.get("_source").get("row_number_in_article", None)
             }
             for hit in response["hits"]["hits"]
         ]
