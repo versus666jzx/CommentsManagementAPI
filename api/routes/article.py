@@ -61,6 +61,21 @@ async def create_article(article: Article):
 
     article.make_metadata()
 
+    sql = """
+    SELECT DISTINCT title, author
+    FROM articles
+    """
+
+    pg_instance.cursor.execute(sql)
+    res = pg_instance.cursor.fetchall()
+    for title, author in res:
+        if title == article.title and author == article.author:
+            res = ApiResult(
+                status="error",
+                message=f"Статья с названием '{article.title}' от автора '{article.author}' уже существует"
+            )
+            return JSONResponse(res())
+
     try:
         response = es_instance.es.index(index="articles", document=article.model_dump())
         res = ApiResult(
@@ -98,6 +113,9 @@ async def create_article_from_excel(excel_file: UploadFile) -> JSONResponse:
         )
     )
     created = json.loads(created.body.decode("utf-8"))
+
+    if created["status"] == "error":
+        return JSONResponse(created)
 
     list_of_comments = make_comments(
         data=processed_data, article_id=created["result"]["article_id"]
