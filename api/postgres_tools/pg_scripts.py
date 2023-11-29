@@ -11,10 +11,11 @@ def insert_article_in_pg(
     date: str,
     author: str,
     data: pd.DataFrame,
+    article_description: str,
 ):
     sql = """
-        INSERT INTO articles (article_id, title, tags, date, content_indexes, row_content, author, row_number_in_article) 
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s) 
+        INSERT INTO articles (article_id, title, tags, date, content_indexes, row_content, author, row_number_in_article, row_number_to_display, description) 
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) 
     """
     batch = []
 
@@ -28,7 +29,9 @@ def insert_article_in_pg(
                 row["list_tokens"],
                 row["Строка"],
                 author,
+                row["Порядковый номер (по всему тексту)"],
                 row["Номер строки текста для отображения"],
+                article_description,
             )
         )
 

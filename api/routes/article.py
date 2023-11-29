@@ -47,6 +47,10 @@ async def create_article(article: Article):
     - `content_indexes` (list[int])
         Необязательное поле. Список индексов слов/токенов контента статьи. Необходим для определения позиции
         комментария в статье. Если не задано, то будет посчитано автоматически.
+    - `description` (str)
+        Описание статьи
+    - `row_number_to_display` (int)
+        Необязательное поле. Номер строки для отображения.
 
     Возвращает:
     -----------
@@ -77,6 +81,10 @@ async def create_article_from_excel(excel_file: UploadFile) -> JSONResponse:
     )
     article_file = await excel_file.read()
     data = pd.read_excel(io.BytesIO(article_file))
+    try:
+        article_description = data["description"][0]
+    except Exception:
+        article_description = "Отсутствует"
     processed_data = preprocess_excel_article(data)
     res = make_article(processed_data)
     created = await create_article(
@@ -86,6 +94,7 @@ async def create_article_from_excel(excel_file: UploadFile) -> JSONResponse:
             tags=[],
             author=article_author,
             content_indexes=res["list_indexes"],
+            description=article_description,
         )
     )
     created = json.loads(created.body.decode("utf-8"))
@@ -120,6 +129,7 @@ async def create_article_from_excel(excel_file: UploadFile) -> JSONResponse:
         date=datetime.now().strftime("%Y-%m-%d"),
         author=article_author,
         data=processed_data,
+        article_description=article_description,
     )
 
     insert_comments_in_pg(comments_batch=created_comments_batch)
@@ -191,8 +201,15 @@ async def delete_article(article_id: Annotated[str, Body(...)]):
 
     """
 
+    sql = """
+    DELETE
+    FROM articles
+    WHERE article_id = %s
+    """
+
     try:
         response = es_instance.es.delete(index="articles", id=article_id)
+        pg_instance.cursor.execute(sql, (article_id,))
         res = ApiResult(status="ok", result={"status": response.get("result")})
     except NotFoundError:
         res = ApiResult(
@@ -204,7 +221,9 @@ async def delete_article(article_id: Annotated[str, Body(...)]):
 
 
 @router.post("/update_article_content_by_row")
-async def update_article_content_by_row(article_id: str, new_content: str, article_row: int):
+async def update_article_content_by_row(
+    article_id: str, new_content: str, article_row: int
+):
     sql = """
     UPDATE articles
     SET row_content = %s
@@ -213,10 +232,7 @@ async def update_article_content_by_row(article_id: str, new_content: str, artic
     """
 
     pg_instance.cursor.execute(sql, (new_content, article_id, article_row))
-    res = ApiResult(
-        status="ok",
-        result={"update_result": "article content updated"}
-    )
+    res = ApiResult(status="ok", result={"update_result": "article content updated"})
     return JSONResponse(res())
 
 
@@ -263,7 +279,7 @@ async def search_articles(query: str, size: int = 10, get_from: int = 0):
         )
         print(response)
         articles = [
-            {         
+            {
                 "id": hit.get("_id"),
                 "author": hit.get("_source").get("author"),
                 "title": hit.get("_source").get("title"),
@@ -312,7 +328,7 @@ async def get_all_articles(size: int = 10, get_from: int = 0):
                 "index": hit.get("_index"),
                 "title": hit.get("_source").get("title", ""),
                 "author": hit.get("_source").get("author", ""),
-                "description": 'тут будет описание',  # TODO описание сюда добавить
+                "description": hit.get("_source").get("description", ""),
                 # "content": hit.get("_source").get("content", ""),
                 "tags": hit.get("_source").get("tags", []),
                 "date": hit.get("_source").get("date", ""),
@@ -346,51 +362,8 @@ async def get_article_by_id(article_id: str):
     try:
         response = es_instance.es.get(index="articles", id=article_id)
         article = Article(**response["_source"]).model_dump()
-
+        article.update({"article_id": article_id})
         res = ApiResult(status="ok", result={"article": article})
-    except Exception as err:
-        res = ApiResult(status="error", message=f"{err}")
-    return JSONResponse(res())
-
-
-@router.get("/get_article_comments")
-async def get_article_comments(article_id: str):
-    """
-    **Получение комментариев к статье.**
-
-    Параметры:
-    -----------
-    - `article_id` (str):
-        Уникальный идентификатор статьи, комментарии к которой необходимо получить.
-
-    Возвращает:
-    -----------
-    `JSONResponse`
-        Ответ в формате JSON со списком комментариев к статье или ошибкой.
-
-    """
-
-    body = {"query": {"match": {"article_id": article_id}}}
-
-    try:
-        response = es_instance.es.search(index="comments", body=body, size=1000)
-
-        comments = [
-            {
-                "id": hit.get("_id"),
-                "index": hit.get("_index"),
-                "comment_start_index": hit.get("_source").get(
-                    "comment_start_index", None
-                ),
-                "comment_end_index": hit.get("_source").get("comment_end_index", None),
-                "date": hit.get("_source").get("date", ""),
-                "content": hit.get("_source").get("content", None),
-                "author": hit.get("_source").get("author", None),
-            }
-            for hit in response["hits"]["hits"]
-        ]
-
-        res = ApiResult(status="ok", result={"article_comments": comments})
     except Exception as err:
         res = ApiResult(status="error", message=f"{err}")
     return JSONResponse(res())
@@ -398,12 +371,11 @@ async def get_article_comments(article_id: str):
 
 @router.get("/get_article_by_rows")
 async def get_article(article_id: str, from_row: int = 0, num_rows: int = 0):
-
     list_rows = []
 
     if num_rows == 0:
         sql = """
-                 SELECT row_id, article_id, title, tags, date::text, content_indexes, row_content, author, row_number_in_article
+                 SELECT row_id, article_id, title, tags, date::text, content_indexes, row_content, author, row_number_in_article, row_number_to_display, description
                  FROM articles
                  WHERE article_id = %s AND %s < row_number_in_article
                  ORDER BY row_number_in_article;
@@ -422,11 +394,13 @@ async def get_article(article_id: str, from_row: int = 0, num_rows: int = 0):
                     "row_content": row[6],
                     "author": row[7],
                     "row_number_in_article": row[8],
+                    "row_number_to_display": row[9],
+                    "description": row[10],
                 }
             )
     else:
         sql = """
-                 SELECT row_id, article_id, title, tags, date::text, content_indexes, row_content, author, row_number_in_article
+                 SELECT row_id, article_id, title, tags, date::text, content_indexes, row_content, author, row_number_in_article, row_number_to_display, description
                  FROM articles
                  WHERE article_id = %s AND %s < row_number_in_article AND row_number_in_article <= %s
                  ORDER BY row_number_in_article;
@@ -446,6 +420,8 @@ async def get_article(article_id: str, from_row: int = 0, num_rows: int = 0):
                     "row_content": row[6],
                     "author": row[7],
                     "row_number_in_article": row[8],
+                    "row_number_to_display": row[9],
+                    "description": row[10],
                 }
             )
 
