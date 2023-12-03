@@ -248,7 +248,7 @@ async def get_comments_by_rows(
         sql = """
         SELECT row_id, comment_id, article_id, comment_start_index, comment_end_index, date::text, content, author, row_number_in_article, comment_html
         FROM comments
-        WHERE article_id = %s AND %s < row_number_in_article
+        WHERE article_id = %s AND %s <= row_number_in_article
         ORDER BY row_number_in_article;
         """
 
@@ -274,7 +274,7 @@ async def get_comments_by_rows(
         sql = """
         SELECT row_id, comment_id, article_id, comment_start_index, comment_end_index, date::text, content, author, row_number_in_article, comment_html
         FROM comments
-        WHERE article_id = %s AND %s < row_number_in_article AND row_number_in_article <= %s
+        WHERE article_id = %s AND %s <= row_number_in_article AND row_number_in_article <= %s
         ORDER BY row_number_in_article;
         """
 

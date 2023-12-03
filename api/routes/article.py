@@ -61,6 +61,21 @@ async def create_article(article: Article):
 
     article.make_metadata()
 
+    sql = """
+    SELECT DISTINCT title, author
+    FROM articles
+    """
+
+    pg_instance.cursor.execute(sql)
+    res = pg_instance.cursor.fetchall()
+    for title, author in res:
+        if title == article.title and author == article.author:
+            res = ApiResult(
+                status="error",
+                message=f"Статья с названием '{article.title}' от автора '{article.author}' уже существует"
+            )
+            return JSONResponse(res())
+
     try:
         response = es_instance.es.index(index="articles", document=article.model_dump())
         res = ApiResult(
@@ -98,6 +113,9 @@ async def create_article_from_excel(excel_file: UploadFile) -> JSONResponse:
         )
     )
     created = json.loads(created.body.decode("utf-8"))
+
+    if created["status"] == "error":
+        return JSONResponse(created)
 
     list_of_comments = make_comments(
         data=processed_data, article_id=created["result"]["article_id"]
@@ -201,15 +219,36 @@ async def delete_article(article_id: Annotated[str, Body(...)]):
 
     """
 
-    sql = """
+    sql_delete_article = """
     DELETE
     FROM articles
     WHERE article_id = %s
     """
 
+    sql_delete_article_comments = """
+    DELETE
+    FROM comments
+    WHERE article_id = %s
+    """
+
+    sql_get_comments_id = """
+    SELECT comment_id
+    FROM comments
+    WHERE article_id = %s
+    """
+
     try:
+        pg_instance.cursor.execute(sql_get_comments_id, (article_id,))
+        comments_id = pg_instance.cursor.fetchall()
+        list_comments_id = [x[0] for x in comments_id]
         response = es_instance.es.delete(index="articles", id=article_id)
-        pg_instance.cursor.execute(sql, (article_id,))
+        for comment_id in list_comments_id:
+            try:
+                es_instance.es.delete(index="comments", id=comment_id)
+            except Exception:
+                continue
+        pg_instance.cursor.execute(sql_delete_article, (article_id,))
+        pg_instance.cursor.execute(sql_delete_article_comments, (article_id,))
         res = ApiResult(status="ok", result={"status": response.get("result")})
     except NotFoundError:
         res = ApiResult(
