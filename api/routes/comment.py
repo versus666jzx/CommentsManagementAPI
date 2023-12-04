@@ -101,10 +101,16 @@ async def edit_comment(
         Ответ в формате JSON со статусом изменения комментария и его версией или ошибкой.
 
     """
-
-    body = {"doc": {"content": comment_text, "comment_html": comment_html}}
-
     try:
+        sql = """
+        UPDATE comments
+        SET content = %s, comment_html = %s
+        WHERE comment_id = %s;
+        """
+        pg_instance.cursor.execute(sql, (comment_text, comment_html, comment_id))
+
+        body = {"doc": {"content": comment_text, "comment_html": comment_html}}
+
         response = es_instance.es.update(index="comments", id=comment_id, body=body)
         res = ApiResult(
             status="ok",
@@ -120,7 +126,9 @@ async def edit_comment(
 
 
 @router.post("/delete_comment")
-async def delete_comment(comment_id: Annotated[str, Body(...)]):
+async def delete_comment(
+    comment_id: str,
+    ):
     """
     **Удаление комментария по его ID.**
 
@@ -152,20 +160,6 @@ async def delete_comment(comment_id: Annotated[str, Body(...)]):
         )
     except Exception as err:
         res = ApiResult(status="error", message=f"{err}")
-    return JSONResponse(res())
-
-
-@router.post("/update_comment_in_row")
-async def update_comment_in_row(
-    comment_id: str, new_content: str, new_comment_html: str
-):
-    sql = """
-    UPDATE comments
-    SET content = %s, comment_html = %s
-    WHERE comment_id = %s;
-    """
-    pg_instance.cursor.execute(sql, (new_content, new_comment_html, comment_id))
-    res = ApiResult(status="ok", result={"update_result": "comment_updated"})
     return JSONResponse(res())
 
 
