@@ -314,3 +314,33 @@ async def get_comments_by_rows(
     res = ApiResult(status="ok", result={"article_comments": sorted_comments})
 
     return JSONResponse(res())
+
+
+@router.get("/get_comment_by_id")
+async def get_comment_by_id(comment_id: str):
+    sql = """
+    SELECT row_id, comment_id, article_id, comment_start_index, comment_end_index, date::text, content, author, row_number_in_article, comment_html
+    FROM comments
+    WHERE comment_id = %s
+    """
+
+    pg_instance.cursor.execute(sql, (comment_id,))
+    res = pg_instance.cursor.fetchone()
+
+    article_comment = {
+                "row_id": res[0],
+                "comment_id": res[1],
+                "article_id": res[2],
+                "comment_start_index": res[3],
+                "comment_end_index": res[4],
+                "date": res[5],
+                "content": res[6],
+                "author": res[7],
+                "row_number_in_article": res[8],
+                "comment_html": res[9],
+                }
+
+    res = ApiResult(status="ok", result={"article_comment": article_comment})
+
+    return JSONResponse(res())
+
