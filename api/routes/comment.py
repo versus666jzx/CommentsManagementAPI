@@ -10,7 +10,7 @@ from api.classes.comment import PGComment
 from api.classes.result import ApiResult
 from api.es_tools.es_connection import es_instance
 from api.postgres_tools.postgres_connection import pg_instance
-from api.tools.auth import security
+from api.tools.auth import security, check_auth
 
 
 router = APIRouter(
@@ -51,23 +51,7 @@ async def add_comment(
 
     """
 
-    current_username_bytes = credentials.username.encode("utf8")
-    correct_username_bytes = b"admin"
-    is_correct_username = secrets.compare_digest(
-        current_username_bytes, correct_username_bytes
-    )
-    current_password_bytes = credentials.password.encode("utf8")
-    correct_password_bytes = b"admin"
-    is_correct_password = secrets.compare_digest(
-        current_password_bytes, correct_password_bytes
-    )
-
-    if not (is_correct_username and is_correct_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Basic"},
-        )
+    check_auth(credentials)
 
     sql = """
     INSERT INTO comments (comment_id, article_id, comment_start_index, comment_end_index, date, content, author, comment_html, row_number_in_article)
@@ -127,23 +111,7 @@ async def edit_comment(
 
     """
 
-    current_username_bytes = credentials.username.encode("utf8")
-    correct_username_bytes = b"admin"
-    is_correct_username = secrets.compare_digest(
-        current_username_bytes, correct_username_bytes
-    )
-    current_password_bytes = credentials.password.encode("utf8")
-    correct_password_bytes = b"admin"
-    is_correct_password = secrets.compare_digest(
-        current_password_bytes, correct_password_bytes
-    )
-
-    if not (is_correct_username and is_correct_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Basic"},
-        )
+    check_auth(credentials)
 
     body = {"doc": {"content": comment_text, "comment_html": comment_html}}
 
@@ -182,23 +150,7 @@ async def delete_comment(
 
     """
 
-    current_username_bytes = credentials.username.encode("utf8")
-    correct_username_bytes = b"admin"
-    is_correct_username = secrets.compare_digest(
-        current_username_bytes, correct_username_bytes
-    )
-    current_password_bytes = credentials.password.encode("utf8")
-    correct_password_bytes = b"admin"
-    is_correct_password = secrets.compare_digest(
-        current_password_bytes, correct_password_bytes
-    )
-
-    if not (is_correct_username and is_correct_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Basic"},
-        )
+    check_auth(credentials)
 
     sql = """
     DELETE
@@ -224,23 +176,7 @@ async def update_comment_in_row(
     comment_id: str, new_content: str, new_comment_html: str, credentials: Annotated[HTTPBasicCredentials, Depends(security)]
 ):
 
-    current_username_bytes = credentials.username.encode("utf8")
-    correct_username_bytes = b"admin"
-    is_correct_username = secrets.compare_digest(
-        current_username_bytes, correct_username_bytes
-    )
-    current_password_bytes = credentials.password.encode("utf8")
-    correct_password_bytes = b"admin"
-    is_correct_password = secrets.compare_digest(
-        current_password_bytes, correct_password_bytes
-    )
-
-    if not (is_correct_username and is_correct_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Basic"},
-        )
+    check_auth(credentials)
 
     sql = """
     UPDATE comments

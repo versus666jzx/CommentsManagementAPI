@@ -16,7 +16,7 @@ from api.es_tools.es_connection import es_instance
 from api.postgres_tools.pg_scripts import insert_article_in_pg, insert_comments_in_pg
 from api.postgres_tools.postgres_connection import pg_instance
 from api.routes.comment import add_comment
-from api.tools.auth import security
+from api.tools.auth import security, check_auth
 from api.tools.data_preprocess import (
     preprocess_excel_article,
     make_article,
@@ -63,23 +63,7 @@ async def create_article(
 
     """
 
-    current_username_bytes = credentials.username.encode("utf8")
-    correct_username_bytes = b"admin"
-    is_correct_username = secrets.compare_digest(
-        current_username_bytes, correct_username_bytes
-    )
-    current_password_bytes = credentials.password.encode("utf8")
-    correct_password_bytes = b"admin"
-    is_correct_password = secrets.compare_digest(
-        current_password_bytes, correct_password_bytes
-    )
-
-    if not (is_correct_username and is_correct_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Basic"},
-        )
+    check_auth(credentials)
 
     article.make_metadata()
 
@@ -116,23 +100,7 @@ async def create_article_from_excel(
         credentials: Annotated[HTTPBasicCredentials, Depends(security)]
 ) -> JSONResponse:
 
-    current_username_bytes = credentials.username.encode("utf8")
-    correct_username_bytes = b"admin"
-    is_correct_username = secrets.compare_digest(
-        current_username_bytes, correct_username_bytes
-    )
-    current_password_bytes = credentials.password.encode("utf8")
-    correct_password_bytes = b"admin"
-    is_correct_password = secrets.compare_digest(
-        current_password_bytes, correct_password_bytes
-    )
-
-    if not (is_correct_username and is_correct_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Basic"},
-        )
+    check_auth(credentials)
 
     article_title, article_author = (
         excel_file.filename.split("_")[0],
@@ -226,23 +194,7 @@ async def edit_article_content(
 
     """
 
-    current_username_bytes = credentials.username.encode("utf8")
-    correct_username_bytes = b"admin"
-    is_correct_username = secrets.compare_digest(
-        current_username_bytes, correct_username_bytes
-    )
-    current_password_bytes = credentials.password.encode("utf8")
-    correct_password_bytes = b"admin"
-    is_correct_password = secrets.compare_digest(
-        current_password_bytes, correct_password_bytes
-    )
-
-    if not (is_correct_username and is_correct_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Basic"},
-        )
+    check_auth(credentials)
 
     body = {
         "doc": {
@@ -286,23 +238,7 @@ async def delete_article(
 
     """
 
-    current_username_bytes = credentials.username.encode("utf8")
-    correct_username_bytes = b"admin"
-    is_correct_username = secrets.compare_digest(
-        current_username_bytes, correct_username_bytes
-    )
-    current_password_bytes = credentials.password.encode("utf8")
-    correct_password_bytes = b"admin"
-    is_correct_password = secrets.compare_digest(
-        current_password_bytes, correct_password_bytes
-    )
-
-    if not (is_correct_username and is_correct_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Basic"},
-        )
+    check_auth(credentials)
 
     sql_delete_article = """
     DELETE
@@ -349,23 +285,7 @@ async def update_article_content_by_row(
     article_id: str, new_content: str, article_row: int, credentials: Annotated[HTTPBasicCredentials, Depends(security)]
 ):
 
-    current_username_bytes = credentials.username.encode("utf8")
-    correct_username_bytes = b"admin"
-    is_correct_username = secrets.compare_digest(
-        current_username_bytes, correct_username_bytes
-    )
-    current_password_bytes = credentials.password.encode("utf8")
-    correct_password_bytes = b"admin"
-    is_correct_password = secrets.compare_digest(
-        current_password_bytes, correct_password_bytes
-    )
-
-    if not (is_correct_username and is_correct_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Basic"},
-        )
+    check_auth(credentials)
 
     sql = """
     UPDATE articles
