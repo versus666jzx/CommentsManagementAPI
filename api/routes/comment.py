@@ -1,13 +1,17 @@
+import secrets
 from typing import Annotated
 
 from elasticsearch import NotFoundError, BadRequestError
-from fastapi import APIRouter, Body
+from fastapi import APIRouter, Body, HTTPException, status, Depends
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPBasicCredentials
 
 from api.classes.comment import PGComment
 from api.classes.result import ApiResult
 from api.es_tools.es_connection import es_instance
 from api.postgres_tools.postgres_connection import pg_instance
+from api.tools.auth import security
+
 
 router = APIRouter(
     prefix="/comment", tags=["Comment"], responses={404: {"description": "Not found"}}
@@ -15,7 +19,9 @@ router = APIRouter(
 
 
 @router.post("/add_comment")
-async def add_comment(comment: PGComment):
+async def add_comment(
+    comment: PGComment, credentials: Annotated[HTTPBasicCredentials, Depends(security)]
+):
     """
     **Добавление комментария к статье.**
 
@@ -44,6 +50,24 @@ async def add_comment(comment: PGComment):
         Ответ в формате JSON с ID комментария или ошибкой.
 
     """
+
+    current_username_bytes = credentials.username.encode("utf8")
+    correct_username_bytes = b"admin"
+    is_correct_username = secrets.compare_digest(
+        current_username_bytes, correct_username_bytes
+    )
+    current_password_bytes = credentials.password.encode("utf8")
+    correct_password_bytes = b"admin"
+    is_correct_password = secrets.compare_digest(
+        current_password_bytes, correct_password_bytes
+    )
+
+    if not (is_correct_username and is_correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
 
     sql = """
     INSERT INTO comments (comment_id, article_id, comment_start_index, comment_end_index, date, content, author, comment_html, row_number_in_article)
@@ -82,6 +106,7 @@ async def edit_comment(
     comment_id: Annotated[str, Body(...)],
     comment_text: Annotated[str, Body(...)],
     comment_html: Annotated[str, Body(...)],
+    credentials: Annotated[HTTPBasicCredentials, Depends(security)]
 ):
     """
     **Редактирование комментария.**
@@ -102,6 +127,24 @@ async def edit_comment(
 
     """
 
+    current_username_bytes = credentials.username.encode("utf8")
+    correct_username_bytes = b"admin"
+    is_correct_username = secrets.compare_digest(
+        current_username_bytes, correct_username_bytes
+    )
+    current_password_bytes = credentials.password.encode("utf8")
+    correct_password_bytes = b"admin"
+    is_correct_password = secrets.compare_digest(
+        current_password_bytes, correct_password_bytes
+    )
+
+    if not (is_correct_username and is_correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
     body = {"doc": {"content": comment_text, "comment_html": comment_html}}
 
     try:
@@ -120,7 +163,10 @@ async def edit_comment(
 
 
 @router.post("/delete_comment")
-async def delete_comment(comment_id: Annotated[str, Body(...)]):
+async def delete_comment(
+        comment_id: Annotated[str, Body(...)],
+        credentials: Annotated[HTTPBasicCredentials, Depends(security)]
+):
     """
     **Удаление комментария по его ID.**
 
@@ -135,6 +181,24 @@ async def delete_comment(comment_id: Annotated[str, Body(...)]):
         Ответ в формате JSON с результатом удаления комментария или ошибкой.
 
     """
+
+    current_username_bytes = credentials.username.encode("utf8")
+    correct_username_bytes = b"admin"
+    is_correct_username = secrets.compare_digest(
+        current_username_bytes, correct_username_bytes
+    )
+    current_password_bytes = credentials.password.encode("utf8")
+    correct_password_bytes = b"admin"
+    is_correct_password = secrets.compare_digest(
+        current_password_bytes, correct_password_bytes
+    )
+
+    if not (is_correct_username and is_correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
 
     sql = """
     DELETE
@@ -157,8 +221,27 @@ async def delete_comment(comment_id: Annotated[str, Body(...)]):
 
 @router.post("/update_comment_in_row")
 async def update_comment_in_row(
-    comment_id: str, new_content: str, new_comment_html: str
+    comment_id: str, new_content: str, new_comment_html: str, credentials: Annotated[HTTPBasicCredentials, Depends(security)]
 ):
+
+    current_username_bytes = credentials.username.encode("utf8")
+    correct_username_bytes = b"admin"
+    is_correct_username = secrets.compare_digest(
+        current_username_bytes, correct_username_bytes
+    )
+    current_password_bytes = credentials.password.encode("utf8")
+    correct_password_bytes = b"admin"
+    is_correct_password = secrets.compare_digest(
+        current_password_bytes, correct_password_bytes
+    )
+
+    if not (is_correct_username and is_correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
     sql = """
     UPDATE comments
     SET content = %s, comment_html = %s
@@ -213,7 +296,9 @@ async def search_comments(query: str, sort_by: str = "desc"):
                 "author": hit.get("_source").get("author", None),
                 "article_id": hit.get("_source").get("article_id", None),
                 "comment_html": hit.get("_source").get("comment_html", None),
-                "row_number_in_article": hit.get("_source").get("row_number_in_article", None)
+                "row_number_in_article": hit.get("_source").get(
+                    "row_number_in_article", None
+                ),
             }
             for hit in response["hits"]["hits"]
         ]

@@ -1,25 +1,27 @@
 import io
 import json
+import secrets
 from datetime import datetime
 from typing import Annotated
 
 import pandas as pd
 from elasticsearch import NotFoundError, BadRequestError
-from fastapi import APIRouter, Body, UploadFile
+from fastapi import APIRouter, Body, UploadFile, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPBasicCredentials
 
 from api.classes.article import Article
 from api.classes.result import ApiResult
 from api.es_tools.es_connection import es_instance
+from api.postgres_tools.pg_scripts import insert_article_in_pg, insert_comments_in_pg
+from api.postgres_tools.postgres_connection import pg_instance
 from api.routes.comment import add_comment
+from api.tools.auth import security
 from api.tools.data_preprocess import (
     preprocess_excel_article,
     make_article,
     make_comments,
 )
-from api.postgres_tools.pg_scripts import insert_article_in_pg, insert_comments_in_pg
-from api.postgres_tools.postgres_connection import pg_instance
-
 
 router = APIRouter(
     prefix="/article", tags=["Article"], responses={404: {"description": "Not found"}}
@@ -27,7 +29,9 @@ router = APIRouter(
 
 
 @router.post("/create_article")
-async def create_article(article: Article):
+async def create_article(
+    article: Article, credentials: Annotated[HTTPBasicCredentials, Depends(security)]
+):
     """
         **Создание статьи.**
 
@@ -59,6 +63,24 @@ async def create_article(article: Article):
 
     """
 
+    current_username_bytes = credentials.username.encode("utf8")
+    correct_username_bytes = b"admin"
+    is_correct_username = secrets.compare_digest(
+        current_username_bytes, correct_username_bytes
+    )
+    current_password_bytes = credentials.password.encode("utf8")
+    correct_password_bytes = b"admin"
+    is_correct_password = secrets.compare_digest(
+        current_password_bytes, correct_password_bytes
+    )
+
+    if not (is_correct_username and is_correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
     article.make_metadata()
 
     sql = """
@@ -72,7 +94,7 @@ async def create_article(article: Article):
         if title == article.title and author == article.author:
             res = ApiResult(
                 status="error",
-                message=f"Статья с названием '{article.title}' от автора '{article.author}' уже существует"
+                message=f"Статья с названием '{article.title}' от автора '{article.author}' уже существует",
             )
             return JSONResponse(res())
 
@@ -89,7 +111,29 @@ async def create_article(article: Article):
 
 
 @router.post("/create_article_from_excel")
-async def create_article_from_excel(excel_file: UploadFile) -> JSONResponse:
+async def create_article_from_excel(
+        excel_file: UploadFile,
+        credentials: Annotated[HTTPBasicCredentials, Depends(security)]
+) -> JSONResponse:
+
+    current_username_bytes = credentials.username.encode("utf8")
+    correct_username_bytes = b"admin"
+    is_correct_username = secrets.compare_digest(
+        current_username_bytes, correct_username_bytes
+    )
+    current_password_bytes = credentials.password.encode("utf8")
+    correct_password_bytes = b"admin"
+    is_correct_password = secrets.compare_digest(
+        current_password_bytes, correct_password_bytes
+    )
+
+    if not (is_correct_username and is_correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
     article_title, article_author = (
         excel_file.filename.split("_")[0],
         excel_file.filename.split("_")[1].split(".")[0],
@@ -161,7 +205,9 @@ async def create_article_from_excel(excel_file: UploadFile) -> JSONResponse:
 
 @router.post("/edit_article_content")
 async def edit_article_content(
-    article_id: Annotated[str, Body(...)], article_text: Annotated[str, Body(...)]
+        article_id: Annotated[str, Body(...)],
+        article_text: Annotated[str, Body(...)],
+        credentials: Annotated[HTTPBasicCredentials, Depends(security)]
 ):
     """
     **Редактирование содержания статьи.**
@@ -179,6 +225,24 @@ async def edit_article_content(
         Ответ в формате JSON со статусом редкатирования статьи и её версии.
 
     """
+
+    current_username_bytes = credentials.username.encode("utf8")
+    correct_username_bytes = b"admin"
+    is_correct_username = secrets.compare_digest(
+        current_username_bytes, correct_username_bytes
+    )
+    current_password_bytes = credentials.password.encode("utf8")
+    correct_password_bytes = b"admin"
+    is_correct_password = secrets.compare_digest(
+        current_password_bytes, correct_password_bytes
+    )
+
+    if not (is_correct_username and is_correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
 
     body = {
         "doc": {
@@ -203,7 +267,10 @@ async def edit_article_content(
 
 
 @router.post("/delete_article")
-async def delete_article(article_id: Annotated[str, Body(...)]):
+async def delete_article(
+        article_id: Annotated[str, Body(...)],
+        credentials: Annotated[HTTPBasicCredentials, Depends(security)]
+):
     """
     **Удаление статьи по её ID.**
 
@@ -218,6 +285,24 @@ async def delete_article(article_id: Annotated[str, Body(...)]):
         Ответ в формате JSON с результатом удаления статьи или ошибкой.
 
     """
+
+    current_username_bytes = credentials.username.encode("utf8")
+    correct_username_bytes = b"admin"
+    is_correct_username = secrets.compare_digest(
+        current_username_bytes, correct_username_bytes
+    )
+    current_password_bytes = credentials.password.encode("utf8")
+    correct_password_bytes = b"admin"
+    is_correct_password = secrets.compare_digest(
+        current_password_bytes, correct_password_bytes
+    )
+
+    if not (is_correct_username and is_correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
 
     sql_delete_article = """
     DELETE
@@ -261,8 +346,27 @@ async def delete_article(article_id: Annotated[str, Body(...)]):
 
 @router.post("/update_article_content_by_row")
 async def update_article_content_by_row(
-    article_id: str, new_content: str, article_row: int
+    article_id: str, new_content: str, article_row: int, credentials: Annotated[HTTPBasicCredentials, Depends(security)]
 ):
+
+    current_username_bytes = credentials.username.encode("utf8")
+    correct_username_bytes = b"admin"
+    is_correct_username = secrets.compare_digest(
+        current_username_bytes, correct_username_bytes
+    )
+    current_password_bytes = credentials.password.encode("utf8")
+    correct_password_bytes = b"admin"
+    is_correct_password = secrets.compare_digest(
+        current_password_bytes, correct_password_bytes
+    )
+
+    if not (is_correct_username and is_correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
     sql = """
     UPDATE articles
     SET row_content = %s

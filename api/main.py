@@ -1,11 +1,11 @@
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
-
+from fastapi.responses import RedirectResponse
 
 from api.es_tools.es_connection import es_instance
 from api.postgres_tools.postgres_connection import pg_instance
 from api.routes import article, comment, authors
+
 
 app = FastAPI(
     title="API электронной библиотеки текстов",
