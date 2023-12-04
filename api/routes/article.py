@@ -335,6 +335,42 @@ async def search_articles(query: str, size: int = 10, get_from: int = 0):
     return JSONResponse(res())
 
 
+@router.get("/search_rows_in_articles")
+def search_rows_in_articles(query: str, count_match_rows: int):
+    list_rows = []
+
+    sql = """
+    SELECT row_id, article_id, title, tags, date::text, content_indexes, row_content, author, row_number_in_article, row_number_to_display, description, ts_rank(to_tsvector(row_content), plainto_tsquery(%s))
+    FROM articles
+    WHERE to_tsvector(row_content) @@ plainto_tsquery(%s)
+    ORDER BY ts_rank(to_tsvector(row_content), plainto_tsquery(%s)) DESC
+    LIMIT %s;
+    """
+
+    pg_instance.cursor.execute(sql, (query, query, query, count_match_rows))
+    res = pg_instance.cursor.fetchall()
+    for row in res:
+        list_rows.append(
+            {
+                "row_id": row[0],
+                "article_id": row[1],
+                "title": row[2],
+                "tags": row[3],
+                "date": row[4],
+                "content_indexes": row[5],
+                "row_content": row[6],
+                "author": row[7],
+                "row_number_in_article": row[8],
+                "row_number_to_display": row[9],
+                "description": row[10],
+                "ts_rank": row[11]
+            }
+        )
+
+    res = ApiResult(status="ok", result={"article_rows": list_rows})
+
+    return JSONResponse(res())
+
 @router.get("/get_all_articles")
 async def get_all_articles(size: int = 10, get_from: int = 0):
     """
